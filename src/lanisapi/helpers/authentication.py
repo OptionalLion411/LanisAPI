@@ -1,6 +1,7 @@
 """This script has various functions to log into Lanis."""
 from time import time
 from urllib.parse import urljoin
+import re
 
 import httpx
 import machineid
@@ -183,10 +184,10 @@ def get_authentication_sid(
     cookies = httpx.Cookies()
 
     cookies.set("i", schoolid)
-    print(response.headers.get("set-cookie"))
+    sid = re.search("sid=(\w+);", response.headers.get("set-cookie")).group(1)
     cookies.set(
         "sid",
-        response.headers.get("set-cookie").split(";")[2].split(", ")[1].split("=")[1],
+        sid # response.headers.get("set-cookie").split(";")[2].split(", ")[1].split("=")[1],
     )
 
     LOGGER.info("Authentication - Get sid: Success.")

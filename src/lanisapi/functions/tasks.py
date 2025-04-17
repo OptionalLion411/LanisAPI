@@ -2,12 +2,14 @@
 
 from datetime import datetime
 from urllib.parse import urljoin
+from collections import defaultdict
 
 from attrs import define, field
 from selectolax.parser import HTMLParser
 
 from ..constants import LOGGER, URL
 from ..exceptions import CriticalElementWasNotFoundError
+from ..helpers.cryptor import Cryptor
 from ..helpers.html_logger import HTMLLogger
 from ..helpers.request import Request
 
@@ -41,10 +43,23 @@ class Task:
     date: field(type=datetime)
     subject_name: field(type=str)
     teacher: field(type=str)
-    description: field(type=str)
     details: field(type=str)
+    homework: field(type=str)
+    done: field(type=bool)
     attachment: field(factory=list, type=list[str])
     attachment_url: field(type=str)
+    course_id: field(type=int)
+    entry_id: field(type=str)
+
+@define
+class Attendance:
+    course: field(type=str)
+    teacher: field(type=str)
+    present: field(type=int)        # anwesend
+    excused: field(type=int)        # entschuldigt
+    leaved: field(type=int)         # beurlaubt
+    other_event: field(type=int)    # andere schulische Veranstaltung
+    absent: field(type=int)         # fehlende
 
 
 def _get_tasks() -> list[Task]:
@@ -97,12 +112,18 @@ def _get_tasks() -> list[Task]:
             )
             date = None
 
-        # Description, sometimes there is none, so maybe there is text under the details button.
-        description_element = element.css_first("div.markup.text.realHomework")
+        course_id = element.attributes.get('data-book', None)
+        entry_id = element.attributes.get('data-entry', None)
+
+
+        # Homework, sometimes there is none, so maybe there is text under the details button.
+        homework_element = element.css_first("div.markup.text.realHomework")
         try:
-            description = description_element.text()
+            homework = homework_element.text()
         except AttributeError:
-            description = None
+            homework = None
+
+        done = None if homework is None else element.css_first(".undone") is None
 
         # Details, hidden under the the blue button with the message symbol.
         details_element = element.css_first("div.inhalt span.markup")
@@ -160,10 +181,13 @@ def _get_tasks() -> list[Task]:
             date=date,
             subject_name=subject,
             teacher=teacher,
-            description=description,
+            homework=homework,
+            done=done,
             details=details,
             attachment=attachments,
             attachment_url=attachment_url,
+            course_id=course_id,
+            entry_id=entry_id
         )
 
         task_list.append(task_data)
@@ -171,3 +195,59 @@ def _get_tasks() -> list[Task]:
     LOGGER.info("Get tasks: Successfully got tasks.")
 
     return task_list
+
+def _get_attendance(cryptor: Cryptor) -> list[Attendance]:
+    response = Request.get(URL.tasks)
+
+    html = HTMLParser(cryptor.decrypt_encoded_tags(response.text))
+
+    element = html.css_first("#anwesend")
+    thead = element.css_first("thead > tr") # can be used to check if columns changed, not used here
+    keys = [i.text().strip() for i in thead.css("th")]
+    tbody = element.css("tbody > tr")
+
+    attendances = []
+    total = defaultdict(int)
+
+    for i in tbody:
+        data = {}
+        for key, j in zip(keys, i.css("td")):
+            if 'style' in j.attributes:
+                v = int(j.text(deep=False).strip() or 0)
+                data[key] = v
+                total[key] += v
+            else:
+                data[key] = j.text().strip()
+
+        attendances.append(Attendance(
+            course=data['Kurs'],
+            teacher=data['Lehrkraft'],
+            present=data.get('anwesend', 0),
+            excused=data.get('entschuldigt', 0),
+            absent=data.get('fehlend', 0),
+            leaved=data.get('beurlaubt', 0),
+            other_event=data.get('andere schulische Veranstaltung', 0)
+        ))
+
+    attendances.insert(0, Attendance(
+        course=None,
+        teacher=None,
+        present=total.get('anwesend', 0),
+        excused=total.get('entschuldigt', 0),
+        absent=total.get('fehlend', 0),
+        leaved=total.get('beurlaubt', 0),
+        other_event=total.get('andere schulische Veranstaltung', 0)
+    ))
+    return attendances
+
+def _mark_done(course: str, entry: str, done: bool):
+    res = Request.post(URL.tasks, data={
+        'a': 'sus_homeworkDone',
+        'b': 'done' if done else 'undone',
+        'entry': entry,
+        'id': course
+    }, headers={
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest'
+    })
+    print(res, res.status_code)

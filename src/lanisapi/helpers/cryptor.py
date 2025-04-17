@@ -142,10 +142,6 @@ class Cryptor:
 
         key = re.sub(pattern=r"[xy]", string=pattern, repl=self._random_letter)
 
-        LOGGER.info(
-            f"Cryptor - Generate key: Generated key {key[:8]}-....-4...-....-............-......3..."
-        )
-
         return self.encrypt(key, key)
 
     def _handshake(self, encrypted_key: str) -> str:
@@ -193,8 +189,6 @@ class Cryptor:
         """
         _challenge = self.decrypt(challenge) == self.secret
 
-        LOGGER.info(f"Cryptor - Challenge: Result is {_challenge}")
-
         return _challenge
 
     def _get_public_key(self) -> str:
@@ -239,8 +233,6 @@ class Cryptor:
 
         encrypted = base64.b64encode(rsa.encrypt(self.secret.encode())).decode()
 
-        LOGGER.info(f"Cryptor - Encrypt key: Encrypted key {encrypted[:8]}......")
-
         return encrypted
 
     def encrypt(self, plain: str, secret: str = None) -> str:
@@ -277,8 +269,6 @@ class Cryptor:
             b"Salted__" + salt + aes.encrypt(self._pad(plain))
         ).decode()
 
-        LOGGER.info(f"Cryptor - Encrypt: Encrypted text {encrypted[:8]}....")
-
         return encrypted
 
     @requires_auth
@@ -304,8 +294,6 @@ class Cryptor:
         aes = AES.new(key, AES.MODE_CBC, iv)
 
         decrypted = self._unpad(aes.decrypt(encrypted[16:]))
-
-        LOGGER.info("Cryptor - Decrypt: Decrypted data.")
 
         return decrypted
 
@@ -334,3 +322,6 @@ class Cryptor:
         LOGGER.warning("Cryptor - Authenticate: Couldn't authenticate.")
 
         return False
+
+    def decrypt_encoded_tags(self, html_str: str) -> str:
+        return re.sub(r"<encoded>(.*?)</encoded>", lambda m: self.decrypt(m.group(1)), html_str)
