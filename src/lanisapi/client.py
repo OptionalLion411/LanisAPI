@@ -2,7 +2,7 @@
 
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, time as dtime, timedelta
 from enum import Enum
 from pathlib import Path
 from time import time
@@ -28,7 +28,8 @@ from .functions.calendar import Calendar, _get_calendar, _get_calendar_month
 from .functions.conversations import Conversation, _get_conversations
 from .functions.schools import _get_schools
 from .functions.substitution import SubstitutionPlan, _get_substitutions
-from .functions.tasks import Task, _get_tasks, _get_attendance, _mark_done
+from .functions.tasks import Task, _get_tasks, _get_attendance, _mark_done, Attendance
+from .functions.logoutbook import LogoutSettings, AbsenceInformation, _get_state, _logout_timed, _logout_until, _logout_home, _log_back, _snooze
 from .helpers.authentication import (
     get_authentication_sid,
     get_authentication_url,
@@ -81,7 +82,7 @@ class LanisClient:
             )
         )
         self.authenticated = False
-        self.authentication_method: self.AuthenticationMethod = None
+        self.authentication_method: LanisClient.AuthenticationMethod = None
         self.session_type: SessionType = None
         self.autologin: list[str] | None = None
         self.cryptor = Cryptor()
@@ -474,8 +475,38 @@ class LanisClient:
     @requires_auth
     @check_availability("Mein Unterricht")
     @handle_exceptions
-    def get_attendance(self) -> list:
+    def get_attendance(self) -> list[Attendance]:
         return _get_attendance(self.cryptor)
+
+    @requires_auth
+    @handle_exceptions
+    def get_state(self) -> LogoutSettings|AbsenceInformation:
+        return _get_state()
+
+    @requires_auth
+    @handle_exceptions
+    def logout_timed(self, end_time: dtime, reason: str, agreement: str = "") -> bool:
+        return _logout_timed(end_time, reason, agreement)
+
+    @requires_auth
+    @handle_exceptions
+    def logout_until(self, end_time: datetime, reason: str, agreement: str = "") -> bool:
+        return _logout_until(end_time, reason, agreement)
+
+    @requires_auth
+    @handle_exceptions
+    def logout_home(self, agreement: str = "") -> bool:
+        return _logout_home(agreement)
+
+    @requires_auth
+    @handle_exceptions
+    def logout_snooze(self, minutes: int) -> bool:
+        return _snooze(minutes)
+
+    @requires_auth
+    @handle_exceptions
+    def logout_logback(self) -> bool:
+        return _log_back()
 
     @requires_auth
     @check_availability("Mein Unterricht")

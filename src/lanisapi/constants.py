@@ -21,6 +21,12 @@ class URL:
     tasks = urljoin(base, "meinunterricht.php")
     calendar = urljoin(base, "kalender.php")
     substitution_plan = urljoin(base, "vertretungsplan.php")
+    logout_book = urljoin(base, "austragebuch.php")
     schools = urljoin("https://startcache.schulportal.hessen.de/", "exporteur.php")
     encryption = urljoin(base, "ajax.php")
     login = "https://login.schulportal.hessen.de/"
+
+headers = {
+    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+    'X-Requested-With': 'XMLHttpRequest'
+}
