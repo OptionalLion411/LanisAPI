@@ -22,6 +22,7 @@ class URL:
     calendar = urljoin(base, "kalender.php")
     substitution_plan = urljoin(base, "vertretungsplan.php")
     logout_book = urljoin(base, "austragebuch.php")
+    file_storage = urljoin(base, "dateispeicher.php")
     schools = urljoin("https://startcache.schulportal.hessen.de/", "exporteur.php")
     encryption = urljoin(base, "ajax.php")
     login = "https://login.schulportal.hessen.de/"

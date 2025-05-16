@@ -143,6 +143,8 @@ def _get_available_apps() -> list[str]:
         "Mein Unterricht",
         "Nachrichten - Beta-Version",  # Yeah there are probably more names for that app
         "Vertretungsplan",
+        "Austragebuch ISH",
+        "Dateispeicher"
     ]
     gotten_apps = _get_apps()
 

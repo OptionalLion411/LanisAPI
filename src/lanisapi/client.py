@@ -30,6 +30,7 @@ from .functions.schools import _get_schools
 from .functions.substitution import SubstitutionPlan, _get_substitutions
 from .functions.tasks import Task, _get_tasks, _get_attendance, _mark_done, Attendance
 from .functions.logoutbook import LogoutSettings, AbsenceInformation, _get_state, _logout_timed, _logout_until, _logout_home, _log_back, _snooze
+from .functions.filestorage import _search, _list_node, _download_node, SearchResult, FileNode, FolderNode
 from .helpers.authentication import (
     get_authentication_sid,
     get_authentication_url,
@@ -477,6 +478,24 @@ class LanisClient:
     @handle_exceptions
     def get_attendance(self) -> list[Attendance]:
         return _get_attendance(self.cryptor)
+
+    @requires_auth
+    @check_availability("Dateispeicher")
+    @handle_exceptions
+    def search_files(self, query: str = "") -> list[SearchResult]:
+        return _search(query)
+
+    @requires_auth
+    @check_availability("Dateispeicher")
+    @handle_exceptions
+    def list_files(self, node: int = 0) -> tuple[list[FileNode], list[FolderNode]]:
+        return _list_node(node)
+
+    @requires_auth
+    @check_availability("Dateispeicher")
+    @handle_exceptions
+    def download_file(self, node: int|FileNode) -> bytes:
+        return _download_node(node)
 
     @requires_auth
     @handle_exceptions
