@@ -77,7 +77,7 @@ def _list_node(node_id: int = 0) -> tuple[list[FileNode], list[FolderNode]]:
             download_url=URL.file_storage + "?" + urlencode({"a": "download", "f": file_id}),
             size=_convert_size_unit(fields[4].text().strip()),
             last_modified=datetime.datetime.strptime(fields[3].text().strip(), "%d.%m.%Y %H:%M:%S"),
-            folder_id=None,
+            folder_id=node_id,
             hint=""
         ))
     folders = []
