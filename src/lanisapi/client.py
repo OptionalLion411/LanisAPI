@@ -28,7 +28,7 @@ from .functions.calendar import Calendar, _get_calendar, _get_calendar_month
 from .functions.conversations import Conversation, _get_conversations
 from .functions.schools import _get_schools
 from .functions.substitution import SubstitutionPlan, _get_substitutions
-from .functions.tasks import Task, _get_tasks, _get_attendance, _mark_done, Attendance
+from .functions.tasks import Task, _get_tasks, _get_semester, _get_course, _get_attendance, _mark_done, Attendance, Semester, Course
 from .functions.logoutbook import LogoutSettings, AbsenceInformation, _get_state, _logout_timed, _logout_until, _logout_home, _log_back, _snooze
 from .functions.filestorage import _search, _list_node, _download_node, SearchResult, FileNode, FolderNode
 from .helpers.authentication import (
@@ -39,7 +39,6 @@ from .helpers.authentication import (
     get_session_by_autologin,
 )
 from .helpers.cryptor import Cryptor
-from .helpers.html_logger import HTMLLogger
 from .helpers.request import Request
 from .helpers.wrappers import check_availability, handle_exceptions, requires_auth
 
@@ -99,8 +98,6 @@ class LanisClient:
             "and is fragmented (some schools work, some not), "
             "so expect something to not be working"
         )
-
-        HTMLLogger.init()
 
     def __del__(self) -> None:
         """If the script closes close the parser."""
@@ -476,8 +473,32 @@ class LanisClient:
     @requires_auth
     @check_availability("Mein Unterricht")
     @handle_exceptions
+    def get_semester(self, course_id: int, semester: int = 1) -> Semester:
+        """Return the semester data of a course."""
+
+        return _get_semester(self.cryptor, course_id, semester)
+
+    @requires_auth
+    @check_availability("Mein Unterricht")
+    @handle_exceptions
+    def get_course(self, course_id: int) -> Course:
+        """Return the course data of a course."""
+
+        return _get_course(self.cryptor, course_id)
+
+
+
+    @requires_auth
+    @check_availability("Mein Unterricht")
+    @handle_exceptions
     def get_attendance(self) -> list[Attendance]:
         return _get_attendance(self.cryptor)
+
+    @requires_auth
+    @check_availability("Mein Unterricht")
+    @handle_exceptions
+    def set_done(self, course_id: int, entry_id: int, value=True) -> None:
+        _mark_done(course_id, entry_id, value)
 
     @requires_auth
     @check_availability("Dateispeicher")
@@ -526,12 +547,6 @@ class LanisClient:
     @handle_exceptions
     def logout_logback(self) -> bool:
         return _log_back()
-
-    @requires_auth
-    @check_availability("Mein Unterricht")
-    @handle_exceptions
-    def set_done(self, course: str, entry: str, value=True) -> None:
-        _mark_done(course, entry, value)
 
     @requires_auth
     @check_availability("Nachrichten - Beta-Version")

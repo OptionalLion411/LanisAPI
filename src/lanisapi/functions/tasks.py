@@ -1,6 +1,7 @@
 """This script includes classes and functions about the 'Mein Unterricht' page."""
 
 from datetime import datetime
+from enum import Enum
 from urllib.parse import urljoin
 from collections import defaultdict
 
@@ -10,46 +11,25 @@ from selectolax.parser import HTMLParser
 from ..constants import LOGGER, URL
 from ..exceptions import CriticalElementWasNotFoundError
 from ..helpers.cryptor import Cryptor
-from ..helpers.html_logger import HTMLLogger
 from ..helpers.request import Request
+from ..helpers.util import convert_size_unit
 
 
 @define
-class Task:
-    """The "Mein Unterricht" page in a data type. Expect many parameters to be `None`.
+class Attachment:
+    """The attachment of a task."""
 
-    Parameters
-    ----------
-    title : str
-        Name of the task.
-    date : datetime.datetime
-        Creation date of the task.
-    subject_name : str
-        Subject of the task often with the class name and weird ids at the end,
-        like "Chemie 7GA (071CH01-GYM)"
-    teacher : str
-        Abbreviation of the teacher.
-    description : str
-        Optional description of the task.
-    details : str
-        ``details`` is the blue button with a comment symbol that sometimes appears.
-    attachment : list[str]
-        List of the attachments names.
-    attachment_url : str
-        Download link to a zip file containing all attachments.
-    """
+    name: field(type=str)
+    size: field(type=str)
+    download_url: field(type=str)
 
-    title: field(type=str)
-    date: field(type=datetime)
-    subject_name: field(type=str)
-    teacher: field(type=str)
-    details: field(type=str)
-    homework: field(type=str)
-    done: field(type=bool)
-    attachment: field(factory=list, type=list[str])
-    attachment_url: field(type=str)
-    course_id: field(type=int)
-    entry_id: field(type=str)
+class AttendanceType(Enum):
+    PRESENT = "anwesend"
+    EXCUSED = "entschuldigt"
+    LEAVED = "beurlaubt"
+    OTHER_EVENT = "andere schulische Veranstaltung"
+    ABSENT = "fehlend"
+
 
 @define
 class Attendance:
@@ -60,6 +40,53 @@ class Attendance:
     leaved: field(type=int)         # beurlaubt
     other_event: field(type=int)    # andere schulische Veranstaltung
     absent: field(type=int)         # fehlende
+
+@define
+class Task:
+    """The "Mein Unterricht" page in a data type. Expect many parameters to be `None`. """
+
+    title: field(type=str)
+    description: field(type=str)
+    date: field(type=datetime)
+    subject_name: field(type=str)
+    teacher: field(type=str)
+    homework: field(type=str)
+    done: field(type=bool)
+    attachment: field(factory=list, type=list[str])
+    attachment_url: field(type=str)
+    course_id: field(type=int)
+    entry_id: field(type=str)
+
+@define
+class CourseTask:
+    """The task of a course."""
+
+    entry_id: field(type=str)
+    title: field(type=str)
+    description: field(type=str)
+    date: field(type=datetime)
+    time: field(type=tuple[int, int])
+    homework: field(type=str)
+    done: field(type=bool)
+    attachments: field(factory=list, type=list[Attachment])
+    uploads: field(factory=list, type=list[dict])
+    attendance: field(type=AttendanceType)
+
+@define
+class Semester:
+    """The semester of a course."""
+
+    semester: field(type=int)
+    tasks: field(factory=list, type=list[CourseTask])
+
+@define
+class Course:
+    """The course of a task."""
+
+    name: field(type=str)
+    teacher: field(type=tuple[str, str, str])
+    course_id: field(type=int)
+    semesters: field(factory=list, type=list[Semester])
 
 
 def _get_tasks() -> list[Task]:
@@ -80,11 +107,7 @@ def _get_tasks() -> list[Task]:
     task_list = []
     for element in elements:
         if not element:
-            HTMLLogger.log_missing_element(
-                html.html, "get_task()", elements.index(element), "element"
-            )
-            msg = "Critical task element was not found, something is definitely wrong! Please file a bug with the html_logs.txt file."
-            raise CriticalElementWasNotFoundError(msg)
+            raise CriticalElementWasNotFoundError("Critical task element was not found!")
 
         # Name of task.
         title_element = element.css_first("b.thema")
@@ -92,10 +115,7 @@ def _get_tasks() -> list[Task]:
             title = title_element.text()
         except AttributeError:
             LOGGER.warning(
-                "Get tasks: No task name found, possibly wrong css selector? Please file a bug with the html_logs.txt file."
-            )
-            HTMLLogger.log_missing_element(
-                element.html, "get_task()", elements.index(element), "title"
+                "Get tasks: No task name found, possibly wrong css selector?"
             )
             title = None
 
@@ -105,10 +125,7 @@ def _get_tasks() -> list[Task]:
             date = datetime.strptime(date_element.text(), "%d.%m.%Y")
         except AttributeError:
             LOGGER.warning(
-                "Get tasks: No date found, possibly wrong css selector? Please file a bug with the html_logs.txt file."
-            )
-            HTMLLogger.log_missing_element(
-                element.html, "get_task()", elements.index(element), "date"
+                "Get tasks: No date found, possibly wrong css selector?"
             )
             date = None
 
@@ -138,10 +155,7 @@ def _get_tasks() -> list[Task]:
             subject = subject_element.text()
         except AttributeError:
             LOGGER.warning(
-                "Get tasks: No subject name found, possibly wrong css selector? Please file a bug with the html_logs.txt file."
-            )
-            HTMLLogger.log_missing_element(
-                element.html, "get_task()", elements.index(element), "subject"
+                "Get tasks: No subject name found, possibly wrong css selector?"
             )
             subject = None
 
@@ -151,10 +165,7 @@ def _get_tasks() -> list[Task]:
             teacher = teacher_element.attributes["title"]
         except AttributeError:
             LOGGER.warning(
-                "Get tasks: No teacher name found, possibly wrong css selector? Please file a bug with the html_logs.txt file."
-            )
-            HTMLLogger.log_missing_element(
-                element.html, "get_task()", elements.index(element), "teacher"
+                "Get tasks: No teacher name found, possibly wrong css selector?"
             )
             teacher = None
 
@@ -164,7 +175,7 @@ def _get_tasks() -> list[Task]:
         for attachment_element in attachment_elements:
             attachments.append(attachment_element.attributes["data-file"])
 
-        # The url of a zip containing all attachments.
+        # The download_url of a zip containing all attachments.
         attachment_url_element = element.css_first(
             "div.btn-group.files ul.dropdown-menu li:last-child a"
         )
@@ -178,12 +189,12 @@ def _get_tasks() -> list[Task]:
         # Map everything together to `Task`.
         task_data = Task(
             title=title,
+            description=details,
             date=date,
             subject_name=subject,
             teacher=teacher,
             homework=homework,
             done=done,
-            details=details,
             attachment=attachments,
             attachment_url=attachment_url,
             course_id=course_id,
@@ -195,6 +206,133 @@ def _get_tasks() -> list[Task]:
     LOGGER.info("Get tasks: Successfully got tasks.")
 
     return task_list
+
+def _get_semester(cryptor: Cryptor, course_id: int, semester: int) -> Semester:
+    response = Request.get(URL.tasks, params={
+        'a': 'sus_view',
+        'id': course_id,
+        'halb': semester
+    })
+    html = HTMLParser(cryptor.decrypt_encoded_tags(response.text))
+
+    history = html.css_first("#history")
+    entries = []
+    for i in history.css("tbody > tr"):
+        desc = i.css_first("span.markup i.far.fa-comment-alt:first-child")
+        if desc:
+            desc = desc.parent.text().strip()
+
+        homework = i.css_first("span.homework + br + span.markup")
+        if homework:
+            homework = homework.text().strip()
+        homework_done = i.css_first("span.done.hidden") is None if homework else None
+
+        files = []
+        files_div = i.css_first("div.alert.alert-info")
+        if files_div:
+            base_url = URL.base
+            base_url += files_div.css_first("a").attributes["href"].replace("&b=zip", "")
+
+            for file_div in i.css(".files > .file"):
+                filename = file_div.attributes.get("data-file")
+                size = convert_size_unit(file_div.css_first("a > small").text()[1:-1])
+                file_url = f"{base_url}&f={filename}"
+                files.append(Attachment(
+                    name=filename,
+                    size=size,
+                    download_url=file_url
+                ))
+
+        # TODO maybe add uploads
+        # uploads = []
+        # upload_groups = i.css("div.btn-group")
+        # for upload_group in upload_groups:
+        #     open_upload = upload_group.css_first(".btn-warning")
+        #     closed_upload = upload_group.css_first(".btn-default")
+        #
+        #     base_url = "https://start.schulportal.hessen.de/"
+        #
+        #     if open_upload:
+        #         date_text = (open_upload.css_first("small").text()
+        #                      .replace("\n", "")
+        #                      .strip()
+        #                      .replace("bis ", "")
+        #                      .replace("um", ""))
+        #
+        #         uploads.append({
+        #             "name": open_upload.text().strip(),
+        #             "status": "open",
+        #             "download_url": urljoin(base_url,
+        #                                     upload_group.css_first("ul.dropdown-menu li a").attributes["href"]),
+        #             "uploaded": open_upload.css_first("span.badge").text() if open_upload.css_first(
+        #                 "span.badge") else None,
+        #             "date": date_text
+        #         })
+        #     elif closed_upload:
+        #         uploads.append({
+        #             "name": closed_upload.text().strip(),
+        #             "status": "closed",
+        #             "download_url": urljoin(base_url,
+        #                                     upload_group.css_first("ul.dropdown-menu li a").attributes["href"]),
+        #             "uploaded": closed_upload.css_first("span.badge").text() if closed_upload.css_first(
+        #                 "span.badge") else None
+        #         })
+
+        date_info = [x.strip() for x in i.css_first("td").text().split("\n") if x.strip()]
+        date_date = datetime.strptime(date_info[0], "%d.%m.%Y").date()
+        date_time = [int(j.strip()[:-1]) for j in date_info[1].replace("Stunde", "").split("-")]
+        if len(date_time) < 2:
+            date_time.append(date_time[0])
+
+        attendance = i.css_first("td:last-child").text(deep=False).strip()
+        attendance = AttendanceType(attendance) if attendance and attendance != "nicht erfasst" else None
+
+        entries.append(CourseTask(
+            entry_id=i.attributes.get("data-entry"),
+            title=i.css_first("td > b").text().strip(),
+            description=desc,
+            date=date_date,
+            time=tuple(date_time),
+            homework=homework,
+            done=homework_done,
+            attendance=attendance,
+            attachments=files,
+            uploads=None
+        ))
+
+    # TODO maybe add grades
+    return Semester(
+        semester=semester,
+        tasks=entries
+    )
+
+def _get_course(cryptor: Cryptor, course_id: int) -> Course:
+    response = Request.get(URL.tasks, params={
+        'a': 'sus_view',
+        'id': course_id
+    })
+    html = HTMLParser(response.text)
+
+    semesters = [_get_semester(cryptor, course_id, 1)]
+
+    semester_button = html.css_first(".btn.hidden-print")
+    if semester_button:
+        semesters.append(_get_semester(cryptor, course_id, 2))
+
+    teacher_button = html.css_first(".btn-primary.dropdown-toggle")
+    teacher_info = teacher_button.parent.css_first(".dropdown-menu")
+
+    return Course(
+        course_id=course_id,
+        name=html.css_first("h1").text(deep=False).strip(),
+        teacher=(
+            teacher_info.css_first("li").text().strip(),
+            teacher_button.text().strip(),
+            email.text().replace("mailto:", "").strip() if (email := teacher_info.css_first("[title='E-Mail-Adresse']")) else None
+        ),
+        semesters=semesters
+    )
+
 
 def _get_attendance(cryptor: Cryptor) -> list[Attendance]:
     response = Request.get(URL.tasks)
@@ -240,7 +378,7 @@ def _get_attendance(cryptor: Cryptor) -> list[Attendance]:
     ))
     return attendances
 
-def _mark_done(course: str, entry: str, done: bool):
+def _mark_done(course: int, entry: int, done: bool) -> bool:
     res = Request.post(URL.tasks, data={
         'a': 'sus_homeworkDone',
         'b': 'done' if done else 'undone',
@@ -250,4 +388,4 @@ def _mark_done(course: str, entry: str, done: bool):
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
         'X-Requested-With': 'XMLHttpRequest'
     })
-    print(res, res.status_code)
+    return res.status_code == 200

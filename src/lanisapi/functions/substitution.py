@@ -8,7 +8,6 @@ from selectolax.parser import HTMLParser
 
 from ..constants import LOGGER, URL
 from ..exceptions import CriticalElementWasNotFoundError
-from ..helpers.html_logger import HTMLLogger
 from ..helpers.request import Request
 
 
@@ -87,10 +86,7 @@ def _get_substitution_info() -> dict[str, str]:
     try:
         date = re.findall(r"(\d\d\.\d\d\.\d\d\d\d)", date_element.text())[0]
     except AttributeError as err:
-        HTMLLogger.log_missing_element(
-            html.html, "get_substitution_info()", "/", "date"
-        )
-        msg = "Critical date element was not found, something is definitely wrong! Please file a bug with the html_logs.txt file."
+        msg = "Critical date element was not found, something is definitely wrong!"
         raise CriticalElementWasNotFoundError(msg) from err
 
     LOGGER.info(f"Substitution info: Successfully got info. Notice is {bool(notice)}.")
