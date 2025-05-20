@@ -7,6 +7,7 @@ from selectolax.parser import HTMLParser
 
 from ..constants import URL, headers
 from ..helpers.request import Request
+from ..helpers.util import convert_size_unit
 
 @define
 class SearchResult:
@@ -31,17 +32,6 @@ class FolderNode:
     id: field(type=int)
     subfolder_count: field(type=int, default=0)
 
-
-def _convert_size_unit(size: str) -> int:
-    """Convert the size string to bytes."""
-
-    units = ["B", "KB", "MB", "GB"]
-    val, unit = size.split(" ")
-    val = float(val.replace(",", "."))
-
-    if unit not in units:
-        raise ValueError(f"Invalid size unit: {unit}")
-    return int(val * (1024 ** units.index(unit)))
 
 
 def _search(query: str = "") -> list[SearchResult]:
@@ -75,7 +65,7 @@ def _list_node(node_id: int = 0) -> tuple[list[FileNode], list[FolderNode]]:
             name=fields[2].text().strip(),
             id=file_id,
             download_url=URL.file_storage + "?" + urlencode({"a": "download", "f": file_id}),
-            size=_convert_size_unit(fields[4].text().strip()),
+            size=convert_size_unit(fields[4].text().strip()),
             last_modified=datetime.datetime.strptime(fields[3].text().strip(), "%d.%m.%Y %H:%M:%S"),
             folder_id=node_id,
             hint=""
