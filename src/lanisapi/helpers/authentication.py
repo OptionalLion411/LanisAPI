@@ -209,5 +209,5 @@ def get_moodle_login(
         client.close()
         if location.startswith("custom://"):
             LOGGER.info("Moodle Authentication: Obtained token")
-            return moodle_host, re.search("token=(\w+)", response.headers["location"]).group(1)
+            return moodle_host, re.search("token=([A-Za-z0-9+/=-]+)", response.headers["location"]).group(1)
     return None
