@@ -244,39 +244,6 @@ def _get_semester(cryptor: Cryptor, course_id: int, semester: int) -> Semester:
                 ))
 
         # TODO maybe add uploads
-        # uploads = []
-        # upload_groups = i.css("div.btn-group")
-        # for upload_group in upload_groups:
-        #     open_upload = upload_group.css_first(".btn-warning")
-        #     closed_upload = upload_group.css_first(".btn-default")
-        #
-        #     base_url = "https://start.schulportal.hessen.de/"
-        #
-        #     if open_upload:
-        #         date_text = (open_upload.css_first("small").text()
-        #                      .replace("\n", "")
-        #                      .strip()
-        #                      .replace("bis ", "")
-        #                      .replace("um", ""))
-        #
-        #         uploads.append({
-        #             "name": open_upload.text().strip(),
-        #             "status": "open",
-        #             "download_url": urljoin(base_url,
-        #                                     upload_group.css_first("ul.dropdown-menu li a").attributes["href"]),
-        #             "uploaded": open_upload.css_first("span.badge").text() if open_upload.css_first(
-        #                 "span.badge") else None,
-        #             "date": date_text
-        #         })
-        #     elif closed_upload:
-        #         uploads.append({
-        #             "name": closed_upload.text().strip(),
-        #             "status": "closed",
-        #             "download_url": urljoin(base_url,
-        #                                     upload_group.css_first("ul.dropdown-menu li a").attributes["href"]),
-        #             "uploaded": closed_upload.css_first("span.badge").text() if closed_upload.css_first(
-        #                 "span.badge") else None
-        #         })
 
         date_info = [x.strip() for x in i.css_first("td").text().split("\n") if x.strip()]
         date_date = datetime.strptime(date_info[0], "%d.%m.%Y").date()
@@ -315,8 +282,10 @@ def _get_course(cryptor: Cryptor, course_id: int) -> Course:
 
     semesters = [_get_semester(cryptor, course_id, 1)]
 
+    headline = html.css_first("h1")
     semester_button = html.css_first(".btn.hidden-print")
-    if semester_button:
+    indicator = headline.css_first("span").text()
+    if semester_button or indicator.strip().startswith("2"):
         semesters.append(_get_semester(cryptor, course_id, 2))
 
     teacher_button = html.css_first(".btn-primary.dropdown-toggle")
@@ -324,7 +293,7 @@ def _get_course(cryptor: Cryptor, course_id: int) -> Course:
 
     return Course(
         course_id=course_id,
-        name=html.css_first("h1").text(deep=False).strip(),
+        name=headline.text(deep=False).strip(),
         teacher=(
             teacher_info.css_first("li").text().strip(),
             teacher_button.text().strip(),
