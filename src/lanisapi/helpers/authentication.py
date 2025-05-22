@@ -204,10 +204,10 @@ def get_moodle_login(
         moodle_host = moodle_response.url.host
         response = client.get(f"https://{moodle_host}/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=12345&urlscheme=custom")
         location = response.headers["location"]
-        LOGGER.infno("Moodle Authentication: Success")
+        LOGGER.info("Moodle Authentication: Success")
 
         client.close()
         if location.startswith("custom://"):
-            LOGGER.infno("Moodle Authentication: Obtained token")
+            LOGGER.info("Moodle Authentication: Obtained token")
             return moodle_host, re.search("token=(\w+)", response.headers["location"]).group(1)
     return None
