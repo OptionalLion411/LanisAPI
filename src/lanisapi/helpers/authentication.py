@@ -1,4 +1,4 @@
-"""This script has various functions to log into Lanis."""
+"""This script has various functions to log into Lanis and connected authentication clients."""
 from time import time
 from urllib.parse import urljoin
 import re
@@ -181,8 +181,6 @@ def get_authentication_sid(
     """Get sid and return the 'final' cookies."""
     response = Request.head(url, cookies=cookies)
 
-    cookies = httpx.Cookies()
-
     cookies.set("i", schoolid)
     sid = re.search("sid=(\w+);", response.headers.get("set-cookie")).group(1)
     cookies.set(
@@ -193,3 +191,23 @@ def get_authentication_sid(
     LOGGER.info("Authentication - Get sid: Success.")
 
     return cookies
+
+def get_moodle_login(
+    url: str
+) -> tuple[str, str] | None:
+    """Get the moodle login url and token."""
+
+    with httpx.Client() as client:
+        client.cookies.update(Request.client.cookies.jar)
+
+        moodle_response = client.get(url, follow_redirects=True)
+        moodle_host = moodle_response.url.host
+        response = client.get(f"https://{moodle_host}/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=12345&urlscheme=custom")
+        location = response.headers["location"]
+        LOGGER.infno("Moodle Authentication: Success")
+
+        client.close()
+        if location.startswith("custom://"):
+            LOGGER.infno("Moodle Authentication: Obtained token")
+            return moodle_host, re.search("token=(\w+)", response.headers["location"]).group(1)
+    return None

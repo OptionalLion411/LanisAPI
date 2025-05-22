@@ -37,6 +37,7 @@ from .helpers.authentication import (
     get_session,
     get_session_and_autologin,
     get_session_by_autologin,
+    get_moodle_login
 )
 from .helpers.cryptor import Cryptor
 from .helpers.request import Request
@@ -486,8 +487,6 @@ class LanisClient:
 
         return _get_course(self.cryptor, course_id)
 
-
-
     @requires_auth
     @check_availability("Mein Unterricht")
     @handle_exceptions
@@ -565,6 +564,12 @@ class LanisClient:
             The conversations in Conversation.
         """
         return _get_conversations(self.cryptor, number)
+
+    # TODO: check if moodle is available
+    @requires_auth
+    @handle_exceptions
+    def get_moodle_login(self, url = URL.moodle_redirect) -> tuple[str, str] | None:
+        return get_moodle_login(url)
 
     @requires_auth
     @handle_exceptions

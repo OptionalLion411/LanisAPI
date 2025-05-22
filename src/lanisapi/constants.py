@@ -26,6 +26,7 @@ class URL:
     schools = urljoin("https://startcache.schulportal.hessen.de/", "exporteur.php")
     encryption = urljoin(base, "ajax.php")
     login = "https://login.schulportal.hessen.de/"
+    moodle_redirect = urljoin(base, "schulmoodle.php")
 
 headers = {
     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
