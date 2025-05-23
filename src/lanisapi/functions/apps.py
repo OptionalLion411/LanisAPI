@@ -25,9 +25,9 @@ class Folder:
         The colour of these small top bars which you can see on Lanis.
     """
 
-    name: field(type=str)
-    symbol: field(type=str)
-    colour: field(type=str)
+    name: str = field()
+    symbol: str = field()
+    colour: str = field()
 
 
 @define
@@ -49,11 +49,11 @@ class App:
         A symbol which represents this applet. Lanis uses Font Awesome and Glyphicons for this.
     """
 
-    name: field(type=str)
-    colour: field(type=str)
-    folder: field(factory=list, type=list[Folder])
-    link: field(type=str)
-    symbol: field(type=str)
+    name: str = field()
+    colour: str = field()
+    folder: list[Folder] = field()
+    link: str = field()
+    symbol: str = field()
 
 
 @cache

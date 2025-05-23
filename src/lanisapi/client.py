@@ -497,7 +497,7 @@ class LanisClient:
     @requires_auth
     @check_availability("Mein Unterricht")
     @handle_exceptions
-    def download_attachment(self, attachment: str | Attachment) -> bytes:
+    def download_attachment(self, attachment: str | Attachment):
         return _download_attachment(attachment)
 
     @requires_auth
@@ -521,7 +521,7 @@ class LanisClient:
     @requires_auth
     @check_availability("Dateispeicher")
     @handle_exceptions
-    def download_storage_file(self, node: int|FileNode) -> bytes:
+    def download_storage_file(self, node: int|FileNode):
         return _download_node(node)
 
     @requires_auth

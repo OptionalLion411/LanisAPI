@@ -1,6 +1,6 @@
 """This script includes classes and functions about the 'Mein Unterricht' page."""
 
-from datetime import datetime
+import datetime as dt
 from enum import Enum
 from urllib.parse import urljoin
 from collections import defaultdict
@@ -19,9 +19,9 @@ from ..helpers.util import convert_size_unit
 class Attachment:
     """The attachment of a task."""
 
-    name: field(type=str)
-    size: field(type=str)
-    download_url: field(type=str)
+    name: str = field()
+    size: int = field()
+    download_url: str = field()
 
 class AttendanceType(Enum):
     PRESENT = "anwesend"
@@ -33,60 +33,60 @@ class AttendanceType(Enum):
 
 @define
 class Attendance:
-    course: field(type=str)
-    teacher: field(type=str)
-    present: field(type=int)        # anwesend
-    excused: field(type=int)        # entschuldigt
-    leaved: field(type=int)         # beurlaubt
-    other_event: field(type=int)    # andere schulische Veranstaltung
-    absent: field(type=int)         # fehlende
+    course: str | None = field()
+    teacher: str | None = field()
+    present: int = field()        # anwesend
+    excused: int = field()        # entschuldigt
+    leaved: int = field()         # beurlaubt
+    other_event: int = field()    # andere schulische Veranstaltung
+    absent: int = field()         # fehlende
 
 @define
 class Task:
     """The "Mein Unterricht" page in a data type. Expect many parameters to be `None`. """
 
-    title: field(type=str)
-    description: field(type=str)
-    date: field(type=datetime)
-    subject_name: field(type=str)
-    teacher: field(type=str)
-    homework: field(type=str)
-    done: field(type=bool)
-    attachment: field(factory=list, type=list[str])
-    attachment_url: field(type=str)
-    course_id: field(type=int)
-    entry_id: field(type=str)
+    title: str = field()
+    description: str = field()
+    date: dt.date = field()
+    subject_name: str = field()
+    teacher: str = field()
+    homework: str = field()
+    done: bool = field()
+    attachment: list[str] = field()
+    attachment_url: str = field()
+    course_id: int = field()
+    entry_id: str = field()
 
 @define
 class CourseTask:
     """The task of a course."""
 
-    entry_id: field(type=str)
-    title: field(type=str)
-    description: field(type=str)
-    date: field(type=datetime)
-    time: field(type=tuple[int, int])
-    homework: field(type=str)
-    done: field(type=bool)
-    attachments: field(factory=list, type=list[Attachment])
-    uploads: field(factory=list, type=list[dict])
-    attendance: field(type=AttendanceType)
+    entry_id: str = field()
+    title: str = field()
+    description: str = field()
+    date: dt.date = field()
+    time: tuple[int, int] = field()
+    homework: str = field()
+    done: bool = field()
+    attachments: list[Attachment] = field()
+    attendance: AttendanceType = field()
+    uploads: list[dict] = field(factory=list)
 
 @define
 class Semester:
     """The semester of a course."""
 
-    semester: field(type=int)
-    tasks: field(factory=list, type=list[CourseTask])
+    semester: int = field()
+    tasks: list[CourseTask] = field(factory=list)
 
 @define
 class Course:
     """The course of a task."""
 
-    name: field(type=str)
-    teacher: field(type=tuple[str, str, str])
-    course_id: field(type=int)
-    semesters: field(factory=list, type=list[Semester])
+    name: str = field()
+    teacher: tuple[str, str, str] = field()
+    course_id: int = field()
+    semesters: list[Semester] = field(factory=list)
 
 
 def _get_tasks() -> list[Task]:
@@ -122,7 +122,7 @@ def _get_tasks() -> list[Task]:
         # Date it was given.
         date_element = element.css_first("small span.datum")
         try:
-            date = datetime.strptime(date_element.text(), "%d.%m.%Y")
+            date = dt.datetime.strptime(date_element.text(), "%d.%m.%Y")
         except AttributeError:
             LOGGER.warning(
                 "Get tasks: No date found, possibly wrong css selector?"
@@ -197,7 +197,7 @@ def _get_tasks() -> list[Task]:
             done=done,
             attachment=attachments,
             attachment_url=attachment_url,
-            course_id=course_id,
+            course_id=int(course_id),
             entry_id=entry_id
         )
 
@@ -246,7 +246,7 @@ def _get_semester(cryptor: Cryptor, course_id: int, semester: int) -> Semester:
         # TODO maybe add uploads
 
         date_info = [x.strip() for x in i.css_first("td").text().split("\n") if x.strip()]
-        date_date = datetime.strptime(date_info[0], "%d.%m.%Y").date()
+        date_date = dt.datetime.strptime(date_info[0], "%d.%m.%Y").date()
         date_time = [int(j.strip()[:-1]) for j in date_info[1].replace("Stunde", "").split("-")]
         if len(date_time) < 2:
             date_time.append(date_time[0])
@@ -263,8 +263,7 @@ def _get_semester(cryptor: Cryptor, course_id: int, semester: int) -> Semester:
             homework=homework,
             done=homework_done,
             attendance=attendance,
-            attachments=files,
-            uploads=None
+            attachments=files
         ))
 
     # TODO maybe add grades
@@ -351,8 +350,8 @@ def _get_attendance(cryptor: Cryptor) -> list[Attendance]:
 def _download_attachment(attachment: str | Attachment):
     if isinstance(attachment, Attachment):
         attachment = attachment.download_url
-    response = Request.get(attachment)
-    return response.content
+    stream = Request.client.stream("get", attachment)
+    return stream
 
 
 def _mark_done(course: int, entry: int, done: bool) -> bool:

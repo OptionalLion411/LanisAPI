@@ -17,8 +17,8 @@ class School:
         City name sometimes with abbreviations or fully written.
     """
 
-    name: field(type=str)
-    city: field(type=str)
+    name: str = field()
+    city: str = field()
 
 
 @define
@@ -35,9 +35,9 @@ class LanisAccount:
         The password.
     """
 
-    school: field(type=str | School)
-    username: field(type=str)
-    password: field(type=str)
+    school: str | School = field()
+    username: str = field()
+    password: str = field()
 
 
 @define
@@ -56,8 +56,8 @@ class LanisCookie:
     Use ``LanisClient.authentication_cookies`` from a previous session to get ``LanisCookie`` for the next session.
     """
 
-    school_id: field(type=str)
-    session_id: field(type=str)
+    school_id: str = field()
+    session_id: str = field()
 
 
 class SessionType(Enum):

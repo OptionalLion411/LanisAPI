@@ -40,15 +40,15 @@ class Conversation:
         Currently always None because it wasn't implemented yet.
     """
 
-    id: field(type=str)
-    title: field(type=str)
-    teacher: field(type=str)
-    creation_date: field(type=datetime)
-    newest_date: field(type=datetime)
-    unread: field(type=bool)
-    special_receivers: field(factory=list, type=list[str])
-    receivers: field(factory=list, type=list[str])
-    content: field(type=str)
+    id: str = field()
+    title: str = field()
+    teacher: str = field()
+    creation_date: datetime = field()
+    newest_date: datetime = field()
+    unread: bool = field()
+    special_receivers: list[str] = field()
+    receivers: list[str] = field()
+    content: str = field()
     comments = None
 
 

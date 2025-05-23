@@ -51,17 +51,17 @@ class Calendar:
             You need to call this first, then it returns (hopefully) a string.
         """
 
-        title: field(type=str)
-        description: field(type=str)
-        place: field(type=str)
-        start: field(type=datetime)
-        end: field(type=datetime)
-        whole_day: field(type=bool)
-        responsible: field(type=Callable)
+        title: str = field()
+        description: str = field()
+        place: str = field()
+        start: datetime = field()
+        end: datetime = field()
+        whole_day: bool = field()
+        responsible: Callable = field()
 
-    start: field(type=datetime)
-    end: field(type=datetime)
-    events: field(type=list[Event] | list[dict[str, any]])
+    start: datetime = field()
+    end: datetime = field()
+    events: list[Event] | list[dict[str, any]] =  field()
 
 
 def _get_responsible(id: str) -> str:

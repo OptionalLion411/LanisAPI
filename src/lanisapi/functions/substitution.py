@@ -1,6 +1,7 @@
 """This script includes classes and functions about the 'Vertretungsplan' page."""
 
 import re
+import datetime as dt
 from datetime import datetime
 
 from attrs import define, field
@@ -47,17 +48,17 @@ class SubstitutionPlan:
             More info about the substitution.
         """
 
-        substitute: field(type=str)
-        teacher: field(type=str)
-        hours: field(type=str)
-        class_name: field(type=str)
-        subject: field(type=str)
-        room: field(type=str)
-        notice: field(type=str)
+        substitute: str = field()
+        teacher: str = field()
+        hours: str = field()
+        class_name: str = field()
+        subject: str = field()
+        room: str = field()
+        notice: str = field()
 
-    date: field(type=datetime)
-    info: field(type=str)
-    substitutions: field(factory=list, type=list[Substitution])
+    date: dt.date = field()
+    info: str = field()
+    substitutions: list[Substitution] = field(factory=list)
 
 
 def _get_substitution_info() -> dict[str, str]:

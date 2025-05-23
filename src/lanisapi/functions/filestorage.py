@@ -2,6 +2,7 @@
 import datetime
 from urllib.parse import urlencode
 
+import httpx
 from attrs import define, field
 from selectolax.parser import HTMLParser
 
@@ -11,26 +12,26 @@ from ..helpers.util import convert_size_unit
 
 @define
 class SearchResult:
-    id: field(type=int)
-    text: field(type=str)
-    ordner: field(type=int)
+    id: int = field()
+    text: str = field()
+    ordner: int = field()
 
 @define
 class FileNode:
-    name: field(type=str)
-    id: field(type=int)
-    folder_id: field(type=int|None, default=None)
-    download_url: field(type=str)
-    size: field(type=str)
-    last_modified: field(type=datetime.datetime)
-    hint: field(type=str|None, default=None)
+    name: str = field()
+    id: int = field()
+    download_url: str = field()
+    size: str = field()
+    last_modified: datetime.datetime = field()
+    hint: str|None = field(default=None)
+    folder_id: int|None = field(default=None)
 
 @define
 class FolderNode:
-    name: field(type=str)
-    description: field(type=str)
-    id: field(type=int)
-    subfolder_count: field(type=int, default=0)
+    name: str = field()
+    description: str = field()
+    id: int = field()
+    subfolder_count: int = field(default=0)
 
 
 
@@ -79,8 +80,7 @@ def _list_node(node_id: int = 0) -> tuple[list[FileNode], list[FolderNode]]:
         folders.append(FolderNode(
             name=name,
             id=folder_id,
-            description=description,
-            subfolder_count=None
+            description=description
         ))
 
     return files, folders
@@ -88,8 +88,8 @@ def _list_node(node_id: int = 0) -> tuple[list[FileNode], list[FolderNode]]:
 def _download_node(node_id: int|FileNode = 0):
     if isinstance(node_id, FileNode):
         node_id = node_id.id
-    response = Request.get(URL.file_storage, params={
+    stream = Request.client.stream("get", URL.file_storage, params={
         "a": "download",
         "f": node_id
     }, headers=headers)
-    return response.content
+    return stream

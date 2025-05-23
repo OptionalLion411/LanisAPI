@@ -14,22 +14,22 @@ class LogoutError(Exception):
 
 @define
 class AgreementOption:
-    lastname: field(type=str)
-    firstname: field(type=str)
-    abbreviation: field(type=str)
-    value: field(type=str)
+    lastname: str = field()
+    firstname: str = field()
+    abbreviation: str = field()
+    value: str = field()
 
 @define
 class AbsenceInformation:
-    start: field(type=datetime.datetime, default=None)
-    until: field(type=datetime.datetime)
-    reason: field(type=str)
-    alerts: field(type=list[str], default=[])
+    start: datetime.datetime = field()
+    until: datetime.datetime = field()
+    reason: str = field()
+    alerts: list[str] = field()
 
 @define
 class LogoutSettings:
-    agreement_options: field(type=list[AgreementOption]|None)
-    ikey: field(type=str|None)
+    agreement_options: list[AgreementOption]|None = field()
+    ikey: str|None = field()
 
 absence_pattern = re.compile("Ziel/Grund:\W*<b>(.*?)</b>.+?((bis (.+?) Uhr)|(ab (\w+), den (.+?),\W*um (.+?) Uhr.+?bis (\w+),.+?den (.+?),.+? um (.+?) Uhr))", re.DOTALL)
 
