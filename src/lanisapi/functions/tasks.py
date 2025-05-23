@@ -347,6 +347,14 @@ def _get_attendance(cryptor: Cryptor) -> list[Attendance]:
     ))
     return attendances
 
+
+def _download_attachment(attachment: str | Attachment):
+    if isinstance(attachment, Attachment):
+        attachment = attachment.download_url
+    response = Request.get(attachment)
+    return response.content
+
+
 def _mark_done(course: int, entry: int, done: bool) -> bool:
     res = Request.post(URL.tasks, data={
         'a': 'sus_homeworkDone',

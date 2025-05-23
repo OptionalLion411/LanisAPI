@@ -28,7 +28,8 @@ from .functions.calendar import Calendar, _get_calendar, _get_calendar_month
 from .functions.conversations import Conversation, _get_conversations
 from .functions.schools import _get_schools
 from .functions.substitution import SubstitutionPlan, _get_substitutions
-from .functions.tasks import Task, _get_tasks, _get_semester, _get_course, _get_attendance, _mark_done, Attendance, Semester, Course
+from .functions.tasks import Task, _get_tasks, _get_semester, _get_course, _get_attendance, _download_attachment, \
+    _mark_done, Attendance, Semester, Course, Attachment
 from .functions.logoutbook import LogoutSettings, AbsenceInformation, _get_state, _logout_timed, _logout_until, _logout_home, _log_back, _snooze
 from .functions.filestorage import _search, _list_node, _download_node, SearchResult, FileNode, FolderNode
 from .helpers.authentication import (
@@ -496,6 +497,12 @@ class LanisClient:
     @requires_auth
     @check_availability("Mein Unterricht")
     @handle_exceptions
+    def download_attachment(self, attachment: str | Attachment) -> bytes:
+        return _download_attachment(attachment)
+
+    @requires_auth
+    @check_availability("Mein Unterricht")
+    @handle_exceptions
     def set_done(self, course_id: int, entry_id: int, value=True) -> None:
         _mark_done(course_id, entry_id, value)
 
@@ -514,7 +521,7 @@ class LanisClient:
     @requires_auth
     @check_availability("Dateispeicher")
     @handle_exceptions
-    def download_file(self, node: int|FileNode) -> bytes:
+    def download_storage_file(self, node: int|FileNode) -> bytes:
         return _download_node(node)
 
     @requires_auth
