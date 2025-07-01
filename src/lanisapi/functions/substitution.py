@@ -85,7 +85,7 @@ def _get_substitution_info() -> dict[str, str]:
 
     date_element = html.css_first("div#content div.panel-body h3")
     try:
-        date = re.findall(r"(\d\d\.\d\d\.\d\d\d\d)", date_element.text())[0]
+        date = re.findall(r"(\\d\\d\\.\\d\\d\.\\d\\d\\d\\d)", date_element.text())[0]
     except AttributeError as err:
         msg = "Critical date element was not found, something is definitely wrong!"
         raise CriticalElementWasNotFoundError(msg) from err
