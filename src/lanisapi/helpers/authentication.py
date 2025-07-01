@@ -182,7 +182,7 @@ def get_authentication_sid(
     response = Request.head(url, cookies=cookies)
 
     cookies.set("i", schoolid)
-    sid = re.search("sid=(\w+);", response.headers.get("set-cookie")).group(1)
+    sid = re.search("sid=(\\w+);", response.headers.get("set-cookie")).group(1)
     cookies.set(
         "sid",
         sid # response.headers.get("set-cookie").split(";")[2].split(", ")[1].split("=")[1],

@@ -31,7 +31,7 @@ class LogoutSettings:
     agreement_options: list[AgreementOption]|None = field()
     ikey: str|None = field()
 
-absence_pattern = re.compile("Ziel/Grund:\W*<b>(.*?)</b>.+?((bis (.+?) Uhr)|(ab (\w+), den (.+?),\W*um (.+?) Uhr.+?bis (\w+),.+?den (.+?),.+? um (.+?) Uhr))", re.DOTALL)
+absence_pattern = re.compile("Ziel/Grund:\\W*<b>(.*?)</b>.+?((bis (.+?) Uhr)|(ab (\w+), den (.+?),\W*um (.+?) Uhr.+?bis (\w+),.+?den (.+?),.+? um (.+?) Uhr))", re.DOTALL)
 
 # TODO manual validate agreement option, since its not checked
 

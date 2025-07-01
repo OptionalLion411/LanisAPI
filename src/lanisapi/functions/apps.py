@@ -74,7 +74,7 @@ def _get_folders() -> list[Folder]:
             Folder(
                 name=entry["name"],
                 symbol=re.sub(
-                    r"(fas.|fa.|flip-\w+|glyphicon.|-o|-alt|fw|\n|\r| )",
+                    r"(fas.|fa.|flip-\\w+|glyphicon.|-o|-alt|fw|\n|\r| )",
                     "",
                     entry["logo"],
                 ),
@@ -117,7 +117,7 @@ def _get_apps() -> list[App]:
                 folder=folder,
                 link=urljoin(URL.base, entry["link"]),
                 symbol=re.sub(
-                    r"(fas.|fa.|flip-\w+|glyphicon.|-o|-alt|fw|\n|\r| )",
+                    r"(fas.|fa.|flip-\\w+|glyphicon.|-o|-alt|fw|\n|\r| )",
                     "",
                     entry["Logo"],
                 ),
