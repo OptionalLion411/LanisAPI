@@ -70,10 +70,11 @@ def check_availability(app_name: str) -> FunctionType:
         def check_availability_wrapper(
             *args: tuple, **kwargs: dict[str, any]
         ) -> FunctionType:
-            # Check code
-            if not _get_app_availability(app_name):
-                msg = f"The app ({app_name}) of the function {function.__name__} is not available!"
-                raise AppNotAvailableError(msg)
+            # TODO re-enable availability check, currently it is not working due to changes in Request
+
+            # if not _get_app_availability(app_name):
+            #     msg = f"The app ({app_name}) of the function {function.__name__} is not available!"
+            #     raise AppNotAvailableError(msg)
             return function(*args, **kwargs)
 
         return check_availability_wrapper

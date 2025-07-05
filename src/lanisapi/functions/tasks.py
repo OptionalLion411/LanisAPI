@@ -89,7 +89,7 @@ class Course:
     semesters: list[Semester] = field(factory=list)
 
 
-def _get_tasks() -> list[Task]:
+def _get_tasks(request: Request) -> list[Task]:
     """Return all tasks from the "Mein Unterricht" page with downloads in .zip format.
 
     Returns
@@ -97,7 +97,7 @@ def _get_tasks() -> list[Task]:
     list[Task]
     """
     # Unfortunately there is no API for us.
-    response = Request.get(URL.tasks)
+    response = request.get(URL.tasks)
 
     html = HTMLParser(response.text)
 
@@ -207,8 +207,8 @@ def _get_tasks() -> list[Task]:
 
     return task_list
 
-def _get_semester(cryptor: Cryptor, course_id: int, semester: int) -> Semester:
-    response = Request.get(URL.tasks, params={
+def _get_semester(request: Request, cryptor: Cryptor, course_id: int, semester: int) -> Semester:
+    response = request.get(URL.tasks, params={
         'a': 'sus_view',
         'id': course_id,
         'halb': semester
@@ -272,20 +272,20 @@ def _get_semester(cryptor: Cryptor, course_id: int, semester: int) -> Semester:
         tasks=entries
     )
 
-def _get_course(cryptor: Cryptor, course_id: int) -> Course:
-    response = Request.get(URL.tasks, params={
+def _get_course(request: Request, cryptor: Cryptor, course_id: int) -> Course:
+    response = request.get(URL.tasks, params={
         'a': 'sus_view',
         'id': course_id
     })
     html = HTMLParser(response.text)
 
-    semesters = [_get_semester(cryptor, course_id, 1)]
+    semesters = [_get_semester(request, cryptor, course_id, 1)]
 
     headline = html.css_first("h1")
     semester_button = html.css_first(".btn.hidden-print")
     indicator = headline.css_first("span").text()
     if semester_button or indicator.strip().startswith("2"):
-        semesters.append(_get_semester(cryptor, course_id, 2))
+        semesters.append(_get_semester(request, cryptor, course_id, 2))
 
     teacher_button = html.css_first(".btn-primary.dropdown-toggle")
     teacher_info = teacher_button.parent.css_first(".dropdown-menu")
@@ -302,8 +302,8 @@ def _get_course(cryptor: Cryptor, course_id: int) -> Course:
     )
 
 
-def _get_attendance(cryptor: Cryptor) -> list[Attendance]:
-    response = Request.get(URL.tasks)
+def _get_attendance(request: Request, cryptor: Cryptor) -> list[Attendance]:
+    response = request.get(URL.tasks)
 
     html = HTMLParser(cryptor.decrypt_encoded_tags(response.text))
 
@@ -347,15 +347,16 @@ def _get_attendance(cryptor: Cryptor) -> list[Attendance]:
     return attendances
 
 
-def _download_attachment(attachment: str | Attachment):
+def _download_attachment(request: Request, attachment: str | Attachment):
     if isinstance(attachment, Attachment):
         attachment = attachment.download_url
-    stream = Request.client.stream("get", attachment)
+
+    stream = request.client.stream("get", attachment)
     return stream
 
 
-def _mark_done(course: int, entry: int, done: bool) -> bool:
-    res = Request.post(URL.tasks, data={
+def _mark_done(request: Request, course: int, entry: int, done: bool) -> bool:
+    res = request.post(URL.tasks, data={
         'a': 'sus_homeworkDone',
         'b': 'done' if done else 'undone',
         'entry': entry,

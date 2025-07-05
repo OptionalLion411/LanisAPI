@@ -7,7 +7,7 @@ from ..constants import LOGGER, URL
 from ..helpers.request import Request
 
 
-def _get_schools() -> list[dict[str, str]]:
+def _get_schools(request: Request) -> list[dict[str, str]]:
     """Return all schools with their id, name and city.
 
     Returns
@@ -21,7 +21,7 @@ def _get_schools() -> list[dict[str, str]]:
             return json.load(file)
 
     # `a`: `schoollist` = just means to get the schoollist.
-    response = Request.get(URL.schools, params={"a": "schoollist"})
+    response = request.get(URL.schools, params={"a": "schoollist"})
 
     if not response:
         return None

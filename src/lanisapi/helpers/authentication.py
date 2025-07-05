@@ -12,6 +12,7 @@ from .request import Request
 
 
 def get_session_and_autologin(
+    request: Request,
     schoolid: str, username: str, password: str
 ) -> tuple[httpx.Cookies, str]:
     """Create new session (value: SPH-Session) at Lanis by posting to the login page and get Autologin cookie for the 30-days session.
@@ -30,7 +31,7 @@ def get_session_and_autologin(
         "stayconnected": 1,
     }
 
-    response = Request.post(URL.login, data=data, params=params)
+    response = request.post(URL.login, data=data, params=params)
 
     cookies = httpx.Cookies()
     cookies.set(
@@ -59,7 +60,7 @@ def get_session_and_autologin(
 
     now = int(time())
 
-    registerbrowser = Request.post(urljoin(URL.login, "registerbrowser"), data=data)
+    registerbrowser = request.post(urljoin(URL.login, "registerbrowser"), data=data)
 
     # 1: Autologin token, 2: Timestamp when token expires
     autologin = [
@@ -70,7 +71,7 @@ def get_session_and_autologin(
     return cookies, autologin
 
 
-def get_session_by_autologin(schoolid: str, autologin: str) -> httpx.Cookies:
+def get_session_by_autologin(request: Request, schoolid: str, autologin: str) -> httpx.Cookies:
     """Create new session (value: SPH-Session) at Lanis by posting the autologin token to the login page.
 
     Note
@@ -80,7 +81,7 @@ def get_session_by_autologin(schoolid: str, autologin: str) -> httpx.Cookies:
     """
     params = {"i": schoolid}
 
-    response = Request.post(
+    response = request.post(
         URL.login, params=params, cookies=httpx.Cookies({"SPH-AutoLogin": autologin})
     )
 
@@ -100,7 +101,7 @@ def get_session_by_autologin(schoolid: str, autologin: str) -> httpx.Cookies:
     }
 
     # Get new session
-    login_page_post = Request.post(
+    login_page_post = request.post(
         URL.login,
         data=data,
         params=params,
@@ -119,6 +120,7 @@ def get_session_by_autologin(schoolid: str, autologin: str) -> httpx.Cookies:
 
 
 def get_session(
+    request: Request,
     schoolid: str,
     username: str,
     password: str,
@@ -142,7 +144,7 @@ def get_session(
         "password": password,
     }
 
-    response = Request.post(URL.login, data=data, params=params)
+    response = request.post(URL.login, data=data, params=params)
 
     cookies = httpx.Cookies()
     cookies.set(
@@ -160,10 +162,10 @@ def get_session(
     return cookies, location
 
 
-def get_authentication_url(cookies: httpx.Cookies) -> str:
+def get_authentication_url(request: Request, cookies: httpx.Cookies) -> str:
     """Get the authentication url to get sid."""
     url = "https://connect.schulportal.hessen.de/"
-    response = Request.head(url, cookies=cookies)
+    response = request.head(url, cookies=cookies)
 
     # Link to the next (and final) page.
     authentication_url = response.headers.get("location")
@@ -174,12 +176,13 @@ def get_authentication_url(cookies: httpx.Cookies) -> str:
 
 
 def get_authentication_sid(
+    request: Request,
     url: str,
     cookies: httpx.Cookies,
     schoolid: str,
 ) -> httpx.Cookies:
     """Get sid and return the 'final' cookies."""
-    response = Request.head(url, cookies=cookies)
+    response = request.head(url, cookies=cookies)
 
     cookies.set("i", schoolid)
     sid = re.search("sid=(\\w+);", response.headers.get("set-cookie")).group(1)
@@ -192,13 +195,11 @@ def get_authentication_sid(
 
     return cookies
 
-def get_moodle_login(
-    url: str
-) -> tuple[str, str] | None:
+def get_moodle_login(request: Request, url: str) -> tuple[str, str] | None:
     """Get the moodle login url and token."""
 
     with httpx.Client() as client:
-        client.cookies.update(Request.client.cookies.jar)
+        client.cookies.update(request.client.cookies.jar)
 
         moodle_response = client.get(url, follow_redirects=True)
         moodle_host = moodle_response.url.host

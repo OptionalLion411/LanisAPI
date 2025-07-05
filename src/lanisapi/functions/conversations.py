@@ -72,7 +72,7 @@ def _parse_date(date: str) -> datetime:
     return parsed_newest_date
 
 
-def _get_single_conversation(cryptor: Cryptor, id: str) -> dict[str, any]:
+def _get_single_conversation(request: Request, cryptor: Cryptor, id: str) -> dict[str, any]:
     """Get creation date and content of the conversation.
 
     Parameters
@@ -91,7 +91,7 @@ def _get_single_conversation(cryptor: Cryptor, id: str) -> dict[str, any]:
     ----
     Get comments.
     """
-    single_message_response = Request.post(
+    single_message_response = request.post(
         URL.conversations,
         data={"a": "read", "uniqid": cryptor.encrypt(id)},
         params={"a": "read", "msg": id},
@@ -114,7 +114,7 @@ def _get_single_conversation(cryptor: Cryptor, id: str) -> dict[str, any]:
     return {"creation_date": creation_date, "content": content}
 
 
-def _get_conversations(cryptor: Cryptor, number: int = 5) -> list[Conversation]:
+def _get_conversations(request: Request, cryptor: Cryptor, number: int = 5) -> list[Conversation]:
     """Return conversations from the "Nachrichten - Beta-Version".
 
     Parameters
@@ -131,7 +131,7 @@ def _get_conversations(cryptor: Cryptor, number: int = 5) -> list[Conversation]:
         The conversations in Conversation.
     """
     # script: /module/nachrichten/js/start.js
-    response = Request.post(
+    response = request.post(
         URL.conversations,
         data={"a": "headers", "getType": "visibleOnly", "last": "0"},
         headers={"X-Requested-With": "XMLHttpRequest"},
@@ -185,7 +185,7 @@ def _get_conversations(cryptor: Cryptor, number: int = 5) -> list[Conversation]:
                 receivers.append(parsed_receiver)
 
         single_message_data = _get_single_conversation(
-            cryptor, parsed_conversation["Uniquid"]
+            request, cryptor, parsed_conversation["Uniquid"]
         )
 
         try:

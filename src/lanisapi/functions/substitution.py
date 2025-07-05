@@ -61,7 +61,7 @@ class SubstitutionPlan:
     substitutions: list[Substitution] = field(factory=list)
 
 
-def _get_substitution_info() -> dict[str, str]:
+def _get_substitution_info(request: Request) -> dict[str, str]:
     """Return the notice (if available) and date of the substitution plan.
 
     Returns
@@ -69,7 +69,7 @@ def _get_substitution_info() -> dict[str, str]:
     dict[str, str]
         The data
     """
-    page = Request.get(URL.substitution_plan)
+    page = request.get(URL.substitution_plan)
 
     html = HTMLParser(page.text)
 
@@ -95,7 +95,7 @@ def _get_substitution_info() -> dict[str, str]:
     return {"notice": notice, "date": date}
 
 
-def _get_substitutions() -> SubstitutionPlan:
+def _get_substitutions(request: Request) -> SubstitutionPlan:
     """Return the whole substitution plan of the current day.
 
     Returns
@@ -103,7 +103,7 @@ def _get_substitutions() -> SubstitutionPlan:
     SubstitutionPlan
     """
     try:
-        info = _get_substitution_info()
+        info = _get_substitution_info(request)
     except CriticalElementWasNotFoundError as err:
         raise err
 
@@ -122,7 +122,7 @@ def _get_substitutions() -> SubstitutionPlan:
     data = {"ganzerPlan": "true", "tag": info["date"]}
 
     # Lanis also adds the param `a`: `my` but it does nothing.
-    substitution_raw_data = Request.post(URL.substitution_plan, data=data)
+    substitution_raw_data = request.post(URL.substitution_plan, data=data)
 
     plan = SubstitutionPlan(
         datetime.strptime(info["date"], "%d.%m.%Y").date(), info["notice"], []

@@ -2,7 +2,6 @@
 import datetime
 from urllib.parse import urlencode
 
-import httpx
 from attrs import define, field
 from selectolax.parser import HTMLParser
 
@@ -35,8 +34,8 @@ class FolderNode:
 
 
 
-def _search(query: str = "") -> list[SearchResult]:
-    response = Request.get(URL.file_storage, params={
+def _search(request: Request, query: str = "") -> list[SearchResult]:
+    response = request.get(URL.file_storage, params={
         "q": query, "a": "searchFiles"
     }, headers=headers)
 
@@ -51,8 +50,8 @@ def _search(query: str = "") -> list[SearchResult]:
 
     return res
 
-def _list_node(node_id: int = 0) -> tuple[list[FileNode], list[FolderNode]]:
-    response = Request.get(URL.file_storage, params={
+def _list_node(request: Request, node_id: int = 0) -> tuple[list[FileNode], list[FolderNode]]:
+    response = request.get(URL.file_storage, params={
         "a": "view",
         "folder": node_id
     })
@@ -85,10 +84,10 @@ def _list_node(node_id: int = 0) -> tuple[list[FileNode], list[FolderNode]]:
 
     return files, folders
 
-def _download_node(node_id: int|FileNode = 0):
+def _download_node(request: Request, node_id: int|FileNode = 0):
     if isinstance(node_id, FileNode):
         node_id = node_id.id
-    stream = Request.client.stream("get", URL.file_storage, params={
+    stream = request.client.stream("get", URL.file_storage, params={
         "a": "download",
         "f": node_id
     }, headers=headers)

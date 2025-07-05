@@ -64,7 +64,7 @@ class Calendar:
     events: list[Event] | list[dict[str, any]] =  field()
 
 
-def _get_responsible(id: str) -> str:
+def _get_responsible(request: Request, id: str) -> str:
     """Get the responsible person of an event.
 
     Parameters
@@ -84,12 +84,12 @@ def _get_responsible(id: str) -> str:
         "id": id,
     }
 
-    response = Request.post(URL.calendar, data=data)
+    response = request.post(URL.calendar, data=data)
 
     return response.json()["properties"]["verantwortlich"]
 
 
-def _get_calendar_month(json: bool = False) -> Calendar:
+def _get_calendar_month(request: Request, json: bool = False) -> Calendar:
     """Use the _get_calendar() function but only returns all events of the current month.
 
     Returns
@@ -107,10 +107,10 @@ def _get_calendar_month(json: bool = False) -> Calendar:
     last_date = today.replace(day=last_day)
     first_date = today.replace(day=1)
 
-    return _get_calendar(first_date, last_date, json=json)
+    return _get_calendar(request, first_date, last_date, json=json)
 
 
-def _get_calendar(start: datetime, end: datetime, json: bool = False) -> Calendar:
+def _get_calendar(request: Request, start: datetime, end: datetime, json: bool = False) -> Calendar:
     """Return all calendar events between the start and end date.
 
     Parameters
@@ -157,7 +157,7 @@ def _get_calendar(start: datetime, end: datetime, json: bool = False) -> Calenda
         "end": end.strftime("%Y-%m-%d"),
     }
 
-    calendar_raw_data = Request.post(URL.calendar, data=data)
+    calendar_raw_data = request.post(URL.calendar, data=data)
 
     # Just lazily return JSON.
     if json:
@@ -175,12 +175,12 @@ def _get_calendar(start: datetime, end: datetime, json: bool = False) -> Calenda
         # If data["Verantwortlich"] doesn't even exist, we can just return None when called.
         try:
             responsible = (
-                partial(_get_responsible, id=data["Id"])
+                partial(_get_responsible, request=request, id=data["Id"])
                 if data["Verantwortlich"]
-                else partial(_get_responsible, id=None)
+                else partial(_get_responsible, request=request, id=None)
             )
         except KeyError:
-            responsible = partial(_get_responsible, id=None)
+            responsible = partial(_get_responsible, request=request, id=None)
 
         calendar_data = Calendar.Event(
             title=data["title"],

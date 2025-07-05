@@ -57,7 +57,7 @@ class App:
 
 
 @cache
-def _get_folders() -> list[Folder]:
+def _get_folders(request: Request) -> list[Folder]:
     """Get all web folders from Lanis.
 
     Returns
@@ -67,7 +67,7 @@ def _get_folders() -> list[Folder]:
     """
     folders: list[Folder] = []
 
-    response = Request.get(URL.index, params={"a": "ajax", "f": "apps"})
+    response = request.get(URL.index, params={"a": "ajax", "f": "apps"})
 
     for entry in response.json()["folders"]:
         folders.append(
@@ -88,7 +88,7 @@ def _get_folders() -> list[Folder]:
 
 
 @cache
-def _get_apps() -> list[App]:
+def _get_apps(request: Request) -> list[App]:
     """Get all web applets from Lanis, not only supported ones.
 
     Returns
@@ -98,9 +98,9 @@ def _get_apps() -> list[App]:
     """
     apps: list[App] = []
 
-    folders = _get_folders()
+    folders = _get_folders(request)
 
-    response = Request.get(URL.index, params={"a": "ajax", "f": "apps"})
+    response = request.get(URL.index, params={"a": "ajax", "f": "apps"})
 
     for entry in response.json()["entrys"]:
         # Get Folder dataclass from folder list.
@@ -130,7 +130,7 @@ def _get_apps() -> list[App]:
 
 
 @cache
-def _get_available_apps() -> list[str]:
+def _get_available_apps(request: Request) -> list[str]:
     """Get all supported web applets by this library which are also supported by the Lanis of the user.
 
     Returns
@@ -146,7 +146,7 @@ def _get_available_apps() -> list[str]:
         "Austragebuch ISH",
         "Dateispeicher"
     ]
-    gotten_apps = _get_apps()
+    gotten_apps = _get_apps(request)
 
     available_apps: list[str] = []
 
@@ -165,7 +165,7 @@ def _get_available_apps() -> list[str]:
 
 
 @cache
-def _get_app_availability(app_name: str) -> bool:
+def _get_app_availability(request: Request, app_name: str) -> bool:
     """Check if one of these apps: ``Kalender``, ``Mein Unterricht``, ``Nachrichten - Beta-Version``, ``Vertretungsplan`` is supported by the school.
 
     Parameters
@@ -177,5 +177,5 @@ def _get_app_availability(app_name: str) -> bool:
     -------
     bool
     """
-    available_apps = _get_available_apps()
+    available_apps = _get_available_apps(request)
     return app_name in available_apps

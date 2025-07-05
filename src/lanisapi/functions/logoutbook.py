@@ -35,8 +35,8 @@ absence_pattern = re.compile("Ziel/Grund:\\W*<b>(.*?)</b>.+?((bis (.+?) Uhr)|(ab
 
 # TODO manual validate agreement option, since its not checked
 
-def _get_state() -> LogoutSettings|AbsenceInformation:
-    response = Request.get(URL.logout_book)
+def _get_state(request: Request) -> LogoutSettings|AbsenceInformation:
+    response = request.get(URL.logout_book)
     html = HTMLParser(response.text)
 
     absence = html.css_first("#away")
@@ -74,21 +74,21 @@ def _get_state() -> LogoutSettings|AbsenceInformation:
 
         return LogoutSettings(agreement_options, ikey)
 
-def _get_previous_reasons() -> list[str]:
-    response_dest = Request.post(URL.logout_book, data={
+def _get_previous_reasons(request: Request) -> list[str]:
+    response_dest = request.post(URL.logout_book, data={
         'a': "loadZiele"
     })
 
     return response_dest.json()
 
-def _handle_error(request: Response) -> bool:
-    res = request.json()
-    if "error" in res and res["error"] != "" or request.status_code != 200:
+def _handle_error(response: Response) -> bool:
+    res = response.json()
+    if "error" in res and res["error"] != "" or response.status_code != 200:
         raise LogoutError("Logout failed. " + (res["error"] or "Unknown error"))
     return res["back"]
 
-def _logout_base(options: dict, agreement: str = "") -> bool:
-    sett = _get_state()
+def _logout_base(request: Request, options: dict, agreement: str = "") -> bool:
+    sett = _get_state(request)
     if isinstance(sett, AbsenceInformation):
         raise LogoutError("You are already logged out.")
 
@@ -98,18 +98,18 @@ def _logout_base(options: dict, agreement: str = "") -> bool:
         'save': '1'
     }
 
-    return _handle_error(Request.post(URL.logout_book, headers=headers, data=data))
+    return _handle_error(request.post(URL.logout_book, headers=headers, data=data))
 
-def _snooze(minutes: int) -> bool:
-    request = Request.post(URL.logout_book, headers=headers, data={
+def _snooze(request: Request, minutes: int) -> bool:
+    request = request.post(URL.logout_book, headers=headers, data={
         'a': 'start_sus',
         'b': 'snooze',
         'v': str(minutes)
     })
     return request.status_code == 200
 
-def _logout_timed(time: datetime.time, reason: str, agreement: str = "") -> bool:
-    return _logout_base({
+def _logout_timed(request: Request, time: datetime.time, reason: str, agreement: str = "") -> bool:
+    return _logout_base(request, {
         'a': 'addEntry',
         'art': 'ausgang',
         'bis': f'{time.hour}:{time.minute}',
@@ -117,8 +117,8 @@ def _logout_timed(time: datetime.time, reason: str, agreement: str = "") -> bool
     }, agreement)
 
 
-def _logout_until(time: datetime.datetime, reason: str, agreement: str = "") -> bool:
-    return _logout_base({
+def _logout_until(request: Request, time: datetime.datetime, reason: str, agreement: str = "") -> bool:
+    return _logout_base(request, {
         'a': 'addEntry',
         'art': 'rueckkehrInternat',
         'bisF': f'{time.year}-{time.month:02}-{time.day:02} {time.hour:02}:{time.minute:02}:00',
@@ -126,16 +126,16 @@ def _logout_until(time: datetime.datetime, reason: str, agreement: str = "") -> 
     }, agreement)
 
 # TODO cannot test since I am unable to log back
-def _logout_home(reason: str = "Krank zu Hause", agreement: str = "") -> bool:
-    return _logout_base({
+def _logout_home(request: Request, reason: str = "Krank zu Hause", agreement: str = "") -> bool:
+    return _logout_base(request, {
         'a': 'addEntry',
         'art': 'krankZuHause',
         'offenesEndeAusgang': '1',
         'ziel': reason
     }, agreement)
 
-def _log_back() -> bool:
-    request = Request.post(URL.logout_book, headers=headers, data={
+def _log_back(request: Request) -> bool:
+    request = request.post(URL.logout_book, headers=headers, data={
         'b': 'back'
     })
     return request.status_code == 200

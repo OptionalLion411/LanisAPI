@@ -87,11 +87,10 @@ class LanisClient:
         self.authentication_method: LanisClient.AuthenticationMethod = None
         self.session_type: SessionType = None
         self.autologin: list[str] | None = None
-        self.cryptor = Cryptor()
-
-        Request.set_headers(self.ad_header)
-
-        LOGGER.info("USING VERSION 0.4.2")
+        
+        self.request = Request()
+        self.request.set_headers(self.ad_header)
+        self.cryptor = Cryptor(self.request)
 
         LOGGER.warning("LANISAPI IS STILL IN A EARLY STAGE SO EXPECT BUGS.")
 
@@ -103,18 +102,17 @@ class LanisClient:
 
     def __del__(self) -> None:
         """If the script closes close the parser."""
-        Request.close()
+        self.request.close()
 
     @property
     def authentication_cookies(self) -> LanisCookie:
         """Return ``LanisCookie`` with the authentication data (school id and session id) if authenticated. You can use this to authenticate with Lanis instantly."""
-        cookies = Request.get_cookies()
+        cookies = self.request.get_cookies()
         return LanisCookie(cookies.get("i", domain=""), cookies.get("sid"))
 
     def close(self) -> None:
-        """Close the client and saves to session.json; you need to do this."""
-        Request.close()
-
+        """Close the client; you need to do this."""
+        self.request.close()
         self.authenticated = False
 
         if (
@@ -179,7 +177,7 @@ class LanisClient:
         list[dict[str, str]]
             JSON
         """
-        return _get_schools()
+        return _get_schools(self.request)
 
     @handle_exceptions
     def _create_new_session(self) -> None:
@@ -204,13 +202,13 @@ class LanisClient:
         # Get new session (value: SPH-Session) and autologin token by posting to login page.
         if self.session_type == SessionType.LONG:
             response_cookies, autologin = get_session_and_autologin(
-                school_id, self.authentication.username, self.authentication.password
+                self.request, school_id, self.authentication.username, self.authentication.password
             )
             self.autologin = autologin
             response_location = "."
         else:
             response_cookies, response_location = get_session(
-                school_id, self.authentication.username, self.authentication.password
+                self.request, school_id, self.authentication.username, self.authentication.password
             )
 
         if not response_location:
@@ -219,102 +217,14 @@ class LanisClient:
             raise WrongCredentialsError(msg)
 
         # Get authentication url to get sid.
-        auth_url = get_authentication_url(response_cookies)
+        auth_url = get_authentication_url(self.request, response_cookies)
 
         # Get sid.
-        Request.set_cookies(
-            get_authentication_sid(auth_url, response_cookies, school_id)
+        self.request.set_cookies(
+            get_authentication_sid(self.request, auth_url, response_cookies, school_id)
         )
 
         self.authentication_method = self.AuthenticationMethod.LanisAccount
-
-    @handle_exceptions
-    def _get_from_sessions_file(self) -> None:
-        with open("session.json", "r") as file:
-            raw_session_file = file.read()
-
-            # If session file is empty return forced authenticate
-            if raw_session_file:
-                try:
-                    session_file: JSON = json.loads(raw_session_file)
-                except json.JSONDecodeError as err:
-                    LOGGER.warning("Authenticate: session.json file is corrupted.")
-
-                    if not self.authentication:
-                        msg = "Can't login, no credentials and corrupted session.json."
-                        raise WrongCredentialsError(msg) from err
-
-                    os.remove("session.json")
-                    self.authenticate(force=True, session_type=self.session_type)
-                    raise ForceNewAuthenticationError from err
-            else:
-                LOGGER.info("Authenticate: session.json file is empty.")
-
-                if not self.authentication:
-                    msg = "Can't login, no credentials and empty session.json."
-                    raise WrongCredentialsError(msg)
-
-                self.authenticate(force=True, session_type=self.session_type)
-                raise ForceNewAuthenticationError
-
-            try:
-                if session_file["NORMAL"] and datetime.fromtimestamp(
-                    session_file["NORMAL"]["timestamp"]
-                ) > datetime.now() + timedelta(minutes=-100):
-                    session_id = session_file["NORMAL"]["session_id"]
-                else:
-                    LOGGER.info(
-                        "Authenticate: Check for long session, because normal session is empty or outdated."
-                    )
-                    # Check if autologin timestamp is older then now.
-                    if (
-                        session_file["LONG"]
-                        and datetime.fromtimestamp(session_file["LONG"]["timestamp"])
-                        > datetime.now()
-                    ):
-                        LOGGER.info(
-                            "Authenticate: Get now session id by autologin token."
-                        )
-
-                        self.autologin = session_file["LONG"]["autologin"]
-
-                        response_cookies = get_session_by_autologin(
-                            session_file["SCHOOLID"], self.autologin
-                        )
-
-                        auth_url = get_authentication_url(response_cookies)
-
-                        session_id = get_authentication_sid(
-                            auth_url,
-                            response_cookies,
-                            schoolid=session_file["SCHOOLID"],
-                        )["sid"]
-
-                        self.session_type = SessionType.LONG
-                    else:
-                        LOGGER.info("Authenticate: Long session is outdated or empty.")
-                        os.remove("session.json")
-                        self.authenticate(force=True, session_type=self.session_type)
-                        raise ForceNewAuthenticationError
-            except (ValueError, KeyError) as err:
-                LOGGER.info("Authenticate: session.json file is corrupted.")
-
-                if not self.authentication:
-                    msg = "Can't login, no credentials and corrupted session.json."
-                    raise WrongCredentialsError(msg) from err
-
-                self.authenticate(force=True, session_type=self.session_type)
-                raise ForceNewAuthenticationError from err
-
-            Request.set_cookies(
-                {
-                    "i": session_file["SCHOOLID"],
-                    "sid": session_id,
-                }
-            )
-
-            LOGGER.info("Authenticate: Using found session.json file.")
-            self.authentication_method = self.AuthenticationMethod.SessionsFile
 
     @handle_exceptions
     def authenticate(
@@ -342,15 +252,15 @@ class LanisClient:
 
         self.session_type = session_type
 
-        if self.authentication is None and not Path("session.json").exists():
-            msg = "Can't login, no credentials and no session.json."
+        if self.authentication is None:
+            msg = "Can't login, no credentials."
             raise WrongCredentialsError(msg)
 
         # First check if we can restore session from a file.
         if not force:
             # LanisCookie login (highest priority)
             if isinstance(self.authentication, LanisCookie):
-                Request.set_cookies(
+                self.request.set_cookies(
                     {
                         "i": self.authentication.school_id,
                         "sid": self.authentication.session_id,
@@ -360,19 +270,8 @@ class LanisClient:
                     "Authenticate: Using cookies to authenticate, skip authentication."
                 )
                 self.authentication_method = self.AuthenticationMethod.LanisCookie
-            # Login with session.json
-            elif Path("session.json").exists():
-                try:
-                    self._get_from_sessions_file()
-                except ForceNewAuthenticationError:
-                    LOGGER.info("Authenticate: Forced new authentication, return.")
-                    return
-
         # Create new session if force is True or the other methods are False.
-        if force or not (
-            Path("session.json").exists()
-            or isinstance(self.authentication, LanisCookie)
-        ):
+        if force:
             self._create_new_session()
 
         # Tell Lanis how to encrypt
@@ -382,7 +281,7 @@ class LanisClient:
 
         self.authenticated = True
 
-        available_apps = _get_available_apps()
+        available_apps = _get_available_apps(self.request)
 
         LOGGER.info(f"Session type: {self.session_type.name}")
 
@@ -407,7 +306,7 @@ class LanisClient:
         ----
         For closing the current LanisClient use `close()`
         """
-        Request.post(URL.index, data={"logout": "all"})
+        self.request.post(URL.index, data={"logout": "all"})
         self.authenticated = False
         LOGGER.info("Logged out.")
 
@@ -421,7 +320,7 @@ class LanisClient:
         -------
         SubstitutionPlan
         """
-        return _get_substitutions()
+        return _get_substitutions(self.request)
 
     @requires_auth
     @handle_exceptions
@@ -433,7 +332,7 @@ class LanisClient:
         Calendar
             `Calendar` with `Event`
         """
-        return _get_calendar_month()
+        return _get_calendar_month(self.request)
 
     @requires_auth
     @check_availability("Kalender")
@@ -458,7 +357,7 @@ class LanisClient:
         Calendar
             `Calendar` with `Event` or Json.
         """
-        return _get_calendar(start, end, json)
+        return _get_calendar(self.request, start, end, json)
 
     @requires_auth
     @check_availability("Mein Unterricht")
@@ -470,7 +369,7 @@ class LanisClient:
         -------
         list[TaskData]
         """
-        return _get_tasks()
+        return _get_tasks(self.request)
 
     @requires_auth
     @check_availability("Mein Unterricht")
@@ -478,7 +377,7 @@ class LanisClient:
     def get_semester(self, course_id: int, semester: int = 1) -> Semester:
         """Return the semester data of a course."""
 
-        return _get_semester(self.cryptor, course_id, semester)
+        return _get_semester(self.request, self.cryptor, course_id, semester)
 
     @requires_auth
     @check_availability("Mein Unterricht")
@@ -486,73 +385,73 @@ class LanisClient:
     def get_course(self, course_id: int) -> Course:
         """Return the course data of a course."""
 
-        return _get_course(self.cryptor, course_id)
+        return _get_course(self.request, self.cryptor, course_id)
 
     @requires_auth
     @check_availability("Mein Unterricht")
     @handle_exceptions
     def get_attendance(self) -> list[Attendance]:
-        return _get_attendance(self.cryptor)
+        return _get_attendance(self.request, self.cryptor)
 
     @requires_auth
     @check_availability("Mein Unterricht")
     @handle_exceptions
     def download_attachment(self, attachment: str | Attachment):
-        return _download_attachment(attachment)
+        return _download_attachment(self.request, attachment)
 
     @requires_auth
     @check_availability("Mein Unterricht")
     @handle_exceptions
     def set_done(self, course_id: int, entry_id: int, value=True) -> None:
-        _mark_done(course_id, entry_id, value)
+        _mark_done(self.request, course_id, entry_id, value)
 
     @requires_auth
     @check_availability("Dateispeicher")
     @handle_exceptions
     def search_files(self, query: str = "") -> list[SearchResult]:
-        return _search(query)
+        return _search(self.request, query)
 
     @requires_auth
     @check_availability("Dateispeicher")
     @handle_exceptions
     def list_files(self, node: int = 0) -> tuple[list[FileNode], list[FolderNode]]:
-        return _list_node(node)
+        return _list_node(self.request, node)
 
     @requires_auth
     @check_availability("Dateispeicher")
     @handle_exceptions
     def download_storage_file(self, node: int|FileNode):
-        return _download_node(node)
+        return _download_node(self.request, node)
 
     @requires_auth
     @handle_exceptions
     def get_state(self) -> LogoutSettings|AbsenceInformation:
-        return _get_state()
+        return _get_state(self.request)
 
     @requires_auth
     @handle_exceptions
     def logout_timed(self, end_time: dtime, reason: str, agreement: str = "") -> bool:
-        return _logout_timed(end_time, reason, agreement)
+        return _logout_timed(self.request, end_time, reason, agreement)
 
     @requires_auth
     @handle_exceptions
     def logout_until(self, end_time: datetime, reason: str, agreement: str = "") -> bool:
-        return _logout_until(end_time, reason, agreement)
+        return _logout_until(self.request, end_time, reason, agreement)
 
     @requires_auth
     @handle_exceptions
     def logout_home(self, agreement: str = "") -> bool:
-        return _logout_home(agreement)
+        return _logout_home(self.request, agreement)
 
     @requires_auth
     @handle_exceptions
     def logout_snooze(self, minutes: int) -> bool:
-        return _snooze(minutes)
+        return _snooze(self.request, minutes)
 
     @requires_auth
     @handle_exceptions
     def logout_logback(self) -> bool:
-        return _log_back()
+        return _log_back(self.request)
 
     @requires_auth
     @check_availability("Nachrichten - Beta-Version")
@@ -570,13 +469,13 @@ class LanisClient:
         list[Conversation]
             The conversations in Conversation.
         """
-        return _get_conversations(self.cryptor, number)
+        return _get_conversations(self.request, self.cryptor, number)
 
     # TODO: check if moodle is available
     @requires_auth
     @handle_exceptions
     def get_moodle_login(self, url = URL.moodle_redirect) -> tuple[str, str] | None:
-        return get_moodle_login(url)
+        return get_moodle_login(self.request, url)
 
     @requires_auth
     @handle_exceptions
@@ -588,7 +487,7 @@ class LanisClient:
         list[App]
             A list of `App`.
         """
-        return _get_apps()
+        return _get_apps(self.request)
 
     @requires_auth
     @handle_exceptions
@@ -600,7 +499,7 @@ class LanisClient:
         list[str]
             A list of the supported applets.
         """
-        return _get_available_apps()
+        return _get_available_apps(self.request)
 
     @requires_auth
     @handle_exceptions
@@ -616,7 +515,7 @@ class LanisClient:
         -------
         bool
         """
-        return _get_app_availability(app_name)
+        return _get_app_availability(self.request, app_name)
 
     @requires_auth
     @handle_exceptions
@@ -628,4 +527,4 @@ class LanisClient:
         list[Folder]
             A list of Folder.
         """
-        return _get_folders()
+        return _get_folders(self.request)

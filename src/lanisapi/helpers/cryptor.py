@@ -34,7 +34,9 @@ class Cryptor:
     https://github.com/koenidv/sph-planner/blob/main/app/src/main/java/de/koenidv/sph/networking/Cryption.kt
     """
 
-    def __init__(self) -> None:  # noqa: D107
+    def __init__(self, request: Request) -> None:  # noqa: D107
+        self.request = request
+
         self.secret: str
         self.authenticated = False
 
@@ -158,7 +160,7 @@ class Cryptor:
             Encrypted secret with our secret.
             It's used to check if both parties are encrypting equally.
         """
-        response = Request.post(
+        response = self.request.post(
             URL.encryption,
             params={"f": "rsaHandshake", "s": str(randint(0, 2000))},
             data={"key": encrypted_key},
@@ -200,7 +202,7 @@ class Cryptor:
             The rsa key.
         """
         try:
-            response = Request.get(URL.encryption, params={"f": "rsaPublicKey"})
+            response = self.request.get(URL.encryption, params={"f": "rsaPublicKey"})
         except httpx.RequestError as error:
             LOGGER.error(
                 f"Cryptor - Public key: An error occurred while getting the public key from {error.request.url} - {error}"
