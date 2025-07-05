@@ -319,7 +319,8 @@ def _get_attendance(request: Request, cryptor: Cryptor) -> list[Attendance]:
         data = {}
         for key, j in zip(keys, i.css("td")):
             if 'style' in j.attributes:
-                v = int(j.text(deep=False).strip() or 0)
+                cell = j.text(deep=False).strip()
+                v = int(cell) if cell.isdigit() else 0
                 data[key] = v
                 total[key] += v
             else:
