@@ -316,7 +316,7 @@ class Cryptor:
         self.authenticated = True
 
         if self._challenge(challenge):
-            LOGGER.info("Cryptor - Authenticate: Successfully authenticated.")
+            LOGGER.debug("Cryptor - Authenticate: Successfully authenticated.")
             return True
 
         self.authenticated = False

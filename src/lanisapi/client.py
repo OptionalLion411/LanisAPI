@@ -92,13 +92,7 @@ class LanisClient:
         self.request.set_headers(self.ad_header)
         self.cryptor = Cryptor(self.request)
 
-        LOGGER.warning("LANISAPI IS STILL IN A EARLY STAGE SO EXPECT BUGS.")
-
-        LOGGER.warning(
-            "IMPORTANT: Schulportal Hessen can change some things "
-            "and is fragmented (some schools work, some not), "
-            "so expect something to not be working"
-        )
+        LOGGER.debug("USING VERSION 0.4.2")
 
     def __del__(self) -> None:
         """If the script closes close the parser."""
@@ -114,59 +108,7 @@ class LanisClient:
         """Close the client; you need to do this."""
         self.request.close()
         self.authenticated = False
-
-        if (
-            self.session_type == SessionType.LONG
-            and self.authentication_method == self.AuthenticationMethod.SessionsFile
-        ):
-            LOGGER.info("Closed current session.")
-
-            return
-
-        session_data_normal = {
-            "session_id": self.authentication_cookies.session_id,
-            "timestamp": time(),
-        }
-
-        session_data_long = (
-            {"autologin": self.autologin[0], "timestamp": self.autologin[1]}
-            if self.session_type == SessionType.LONG
-            else None
-        )
-
-        session_data = {
-            "SCHOOLID": self.authentication_cookies.school_id,
-            "NORMAL": session_data_normal,
-            "LONG": session_data_long,
-        }
-
-        # If file exist update it.
-        if Path("session.json").exists():
-            with open("session.json", "r+") as file:
-                raw_session_file = file.read()
-                # If empty
-                if not raw_session_file:
-                    file.write(json.dumps(session_data))
-                    LOGGER.info("Closed current session.")
-                    return
-
-                session_file: JSON = json.loads(raw_session_file)
-                session_data["LONG"] = (
-                    session_file["LONG"]
-                    if session_data["LONG"] is None
-                    else session_data["LONG"]
-                )
-                session_data["NORMAL"]["timestamp"] = time()
-                session_file.update(session_data)
-
-                file.seek(0)
-                file.truncate(0)
-                file.write(json.dumps(session_file))
-        else:
-            with open("session.json", "w") as file:
-                file.write(json.dumps(session_data))
-
-        LOGGER.info("Closed current session.")
+        LOGGER.debug("Closed current session.")
 
     @handle_exceptions
     def get_schools(self) -> list[dict[str, str]]:
@@ -247,7 +189,7 @@ class LanisClient:
         More at https://support.schulportal.hessen.de/knowledgebase.php?article=1087.
         """
         if self.authenticated:
-            LOGGER.warning("Authenticate: Already authenticated.")
+            LOGGER.debug("Authenticate: Already authenticated.")
             return
 
         self.session_type = session_type
@@ -266,9 +208,6 @@ class LanisClient:
                         "sid": self.authentication.session_id,
                     }
                 )
-                LOGGER.info(
-                    "Authenticate: Using cookies to authenticate, skip authentication."
-                )
                 self.authentication_method = self.AuthenticationMethod.LanisCookie
         # Create new session if force is True or the other methods are False.
         if force:
@@ -283,11 +222,11 @@ class LanisClient:
 
         available_apps = _get_available_apps(self.request)
 
-        LOGGER.info(f"Session type: {self.session_type.name}")
+        LOGGER.debug(f"Session type: {self.session_type.name}")
 
-        LOGGER.info(f"Authentication method: {self.authentication_method.name}")
+        LOGGER.debug(f"Authentication method: {self.authentication_method.name}")
 
-        LOGGER.info(
+        LOGGER.debug(
             "Available apps:\n"
             f"  Calendar: {'Kalender' in available_apps}\n"
             + f"  Tasks: {'Mein Unterricht' in available_apps}\n"
@@ -295,7 +234,7 @@ class LanisClient:
             + f"  Substitution plan: {'Vertretungsplan' in available_apps}"
         )
 
-        LOGGER.info("Authenticated.")
+        LOGGER.debug("Authenticated.")
 
     @requires_auth
     @handle_exceptions
@@ -308,7 +247,7 @@ class LanisClient:
         """
         self.request.post(URL.index, data={"logout": "all"})
         self.authenticated = False
-        LOGGER.info("Logged out.")
+        LOGGER.debug("Logged out.")
 
     @requires_auth
     @check_availability("Vertretungsplan")

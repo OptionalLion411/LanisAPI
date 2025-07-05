@@ -109,7 +109,7 @@ def _get_single_conversation(request: Request, cryptor: Cryptor, id: str) -> dic
 
     content = HTMLParser(single_message["Inhalt"]).text()
 
-    LOGGER.info("Get single conversation: Success.")
+    LOGGER.debug("Get single conversation: Success.")
 
     return {"creation_date": creation_date, "content": content}
 

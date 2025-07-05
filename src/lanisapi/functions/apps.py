@@ -82,7 +82,7 @@ def _get_folders(request: Request) -> list[Folder]:
             )
         )
 
-    LOGGER.info("Get folders: Success.")
+    LOGGER.debug("Get folders: Success.")
 
     return folders
 
@@ -124,7 +124,7 @@ def _get_apps(request: Request) -> list[App]:
             )
         )
 
-    LOGGER.info("Get apps: Success.")
+    LOGGER.debug("Get apps: Success.")
 
     return apps
 
@@ -159,7 +159,7 @@ def _get_available_apps(request: Request) -> list[str]:
             ):
                 available_apps.append(implemented)
 
-    LOGGER.info("Get apps availability: Success.")
+    LOGGER.debug("Get apps availability: Success.")
 
     return available_apps
 

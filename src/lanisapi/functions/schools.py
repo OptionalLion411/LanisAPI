@@ -35,6 +35,6 @@ def _get_schools(request: Request) -> list[dict[str, str]]:
         for school in group["Schulen"]:
             schools.append(school)
 
-    LOGGER.info("Get schools: Successfully got schools.")
+    LOGGER.debug("Get schools: Successfully got schools.")
 
     return schools

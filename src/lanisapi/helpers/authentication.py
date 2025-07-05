@@ -157,7 +157,7 @@ def get_session(
     # Link to the next page.
     location = response.headers.get("location")
 
-    LOGGER.info("Authentication - Get session: Successfully created session.")
+    LOGGER.debug("Authentication - Get session: Successfully created session.")
 
     return cookies, location
 
@@ -170,7 +170,7 @@ def get_authentication_url(request: Request, cookies: httpx.Cookies) -> str:
     # Link to the next (and final) page.
     authentication_url = response.headers.get("location")
 
-    LOGGER.info("Authentication - Get url: Successfully got url.")
+    LOGGER.debug("Authentication - Get url: Successfully got url.")
 
     return authentication_url
 
@@ -191,7 +191,7 @@ def get_authentication_sid(
         sid # response.headers.get("set-cookie").split(";")[2].split(", ")[1].split("=")[1],
     )
 
-    LOGGER.info("Authentication - Get sid: Success.")
+    LOGGER.debug("Authentication - Get sid: Success.")
 
     return cookies
 
@@ -205,10 +205,10 @@ def get_moodle_login(request: Request, url: str) -> tuple[str, str] | None:
         moodle_host = moodle_response.url.host
         response = client.get(f"https://{moodle_host}/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=12345&urlscheme=custom")
         location = response.headers["location"]
-        LOGGER.info("Moodle Authentication: Success")
+        LOGGER.debug("Moodle Authentication: Success")
 
         client.close()
         if location.startswith("custom://"):
-            LOGGER.info("Moodle Authentication: Obtained token")
+            LOGGER.debug("Moodle Authentication: Obtained token")
             return moodle_host, re.search("token=([A-Za-z0-9+/=-]+)", response.headers["location"]).group(1)
     return None

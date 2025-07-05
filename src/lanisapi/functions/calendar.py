@@ -165,7 +165,7 @@ def _get_calendar(request: Request, start: datetime, end: datetime, json: bool =
         for event in calendar_raw_data.json():
             calendar.events.append(event)
 
-        LOGGER.info("Get calendar: Successfully got calendar in JSON format.")
+        LOGGER.debug("Get calendar: Successfully got calendar in JSON format.")
 
         return calendar
 
@@ -193,6 +193,6 @@ def _get_calendar(request: Request, start: datetime, end: datetime, json: bool =
         )
         calendar.events.append(calendar_data)
 
-    LOGGER.info("Get calendar: Successfully got calendar.")
+    LOGGER.debug("Get calendar: Successfully got calendar.")
 
     return calendar

@@ -203,7 +203,7 @@ def _get_tasks(request: Request) -> list[Task]:
 
         task_list.append(task_data)
 
-    LOGGER.info("Get tasks: Successfully got tasks.")
+    LOGGER.debug("Get tasks: Successfully got tasks.")
 
     return task_list
 

@@ -90,7 +90,7 @@ def _get_substitution_info(request: Request) -> dict[str, str]:
         msg = "Critical date element was not found, something is definitely wrong!"
         raise CriticalElementWasNotFoundError(msg) from err
 
-    LOGGER.info(f"Substitution info: Successfully got info. Notice is {bool(notice)}.")
+    LOGGER.debug(f"Substitution info: Successfully got info. Notice is {bool(notice)}.")
 
     return {"notice": notice, "date": date}
 
@@ -142,6 +142,6 @@ def _get_substitutions(request: Request) -> SubstitutionPlan:
 
         plan.substitutions.append(substitution_data)
 
-    LOGGER.info("Get substitution plan: Success.")
+    LOGGER.debug("Get substitution plan: Success.")
 
     return plan
