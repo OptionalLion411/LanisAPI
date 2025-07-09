@@ -210,7 +210,7 @@ class LanisClient:
                 )
                 self.authentication_method = self.AuthenticationMethod.LanisCookie
         # Create new session if force is True or the other methods are False.
-        if force:
+        if force or not isinstance(self.authentication, LanisCookie):
             self._create_new_session()
 
         # Tell Lanis how to encrypt
