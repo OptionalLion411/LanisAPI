@@ -189,8 +189,12 @@ class LanisClient:
         More at https://support.schulportal.hessen.de/knowledgebase.php?article=1087.
         """
         if self.authenticated:
-            LOGGER.debug("Authenticate: Already authenticated.")
-            return
+            print("would stop here, already authenticated.")
+            LOGGER.info("Authenticate: Already authenticated.")
+            # this behaviour does not make sense, as the client is unable to check if the session expired or not
+            # instead, this method is explicit enough to get only called if authentication is really needed
+            # as an alternative, we can add a test by calling a side and check if the result is the login page
+            # return
 
         self.session_type = session_type
 
