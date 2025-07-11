@@ -1,17 +1,12 @@
 """This script includes the LanisClient to interact with Lanis."""
 
-import json
-import os
-from datetime import datetime, time as dtime, timedelta
+from datetime import datetime, time as dtime
 from enum import Enum
-from pathlib import Path
-from time import time
 
 import httpx
 
-from .constants import JSON, LOGGER, URL
+from .constants import LOGGER, URL
 from .exceptions import (
-    ForceNewAuthenticationError,
     NoSchoolFoundError,
     WrongCredentialsError,
 )
@@ -26,18 +21,18 @@ from .functions.apps import (
 from .functions.authentication_types import LanisAccount, LanisCookie, SessionType
 from .functions.calendar import Calendar, _get_calendar, _get_calendar_month
 from .functions.conversations import Conversation, _get_conversations
+from .functions.filestorage import _search, _list_node, _download_node, SearchResult, FileNode, FolderNode
+from .functions.logoutbook import LogoutSettings, AbsenceInformation, _get_state, _logout_timed, _logout_until, \
+    _logout_home, _log_back, _snooze
 from .functions.schools import _get_schools
 from .functions.substitution import SubstitutionPlan, _get_substitutions
 from .functions.tasks import Task, _get_tasks, _get_semester, _get_course, _get_attendance, _download_attachment, \
     _mark_done, Attendance, Semester, Course, Attachment
-from .functions.logoutbook import LogoutSettings, AbsenceInformation, _get_state, _logout_timed, _logout_until, _logout_home, _log_back, _snooze
-from .functions.filestorage import _search, _list_node, _download_node, SearchResult, FileNode, FolderNode
 from .helpers.authentication import (
     get_authentication_sid,
     get_authentication_url,
     get_session,
     get_session_and_autologin,
-    get_session_by_autologin,
     get_moodle_login
 )
 from .helpers.cryptor import Cryptor
@@ -55,7 +50,6 @@ class LanisClient:
     authentication : LanisAccount or LanisCookie or None
         1. A Lanis account with its username and password, and a school id or school name and city in ``School``.
         2. Cookies with authentication data (school id and session id) in ``LanisCookie`` for instantly interacting with Lanis. You can obtain this during a session with ``authentication_cookies``.
-        3. If None it will use the session.json, like for the 30-days session or last session (100min), when no session.json exists, it will return ``ForceNewAuthenticationError``.
     ad_header : httpx.Headers, default {"user-agent": ....}
         Send custom headers to Lanis. Primarily used to send a
         custom ``user-agent``.
@@ -66,22 +60,17 @@ class LanisClient:
 
         LanisCookie = 1
         LanisAccount = 2
-        SessionsFile = 3
 
-    def __init__(  # noqa: D107
+    def __init__(
         self,
-        authentication: LanisAccount | LanisCookie | None,
+        authentication: LanisAccount | LanisCookie,
         ad_header: httpx.Headers = None,
     ) -> None:
         self.authentication = authentication
         self.ad_header = (
             ad_header
             if ad_header is not None
-            else httpx.Headers(
-                {
-                    "user-agent": "LanisAPI by kurwjan and contributors (https://github.com/kurwjan/LanisAPI/)"
-                }
-            )
+            else httpx.Headers({})
         )
         self.authenticated = False
         self.authentication_method: LanisClient.AuthenticationMethod = None
@@ -91,8 +80,6 @@ class LanisClient:
         self.request = Request()
         self.request.set_headers(self.ad_header)
         self.cryptor = Cryptor(self.request)
-
-        LOGGER.debug("USING VERSION 0.4.2")
 
     def __del__(self) -> None:
         """If the script closes close the parser."""
