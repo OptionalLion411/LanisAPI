@@ -31,7 +31,7 @@ def get_session_and_autologin(
         "stayconnected": 1,
     }
 
-    response = request.post(URL.login, data=data, params=params)
+    response = request.post(URL.login, authentication=True, data=data, params=params)
 
     cookies = httpx.Cookies()
     cookies.set(
@@ -60,7 +60,7 @@ def get_session_and_autologin(
 
     now = int(time())
 
-    registerbrowser = request.post(urljoin(URL.login, "registerbrowser"), data=data)
+    registerbrowser = request.post(urljoin(URL.login,"registerbrowser"), authentication=True, data=data)
 
     # 1: Autologin token, 2: Timestamp when token expires
     autologin = [
@@ -82,7 +82,7 @@ def get_session_by_autologin(request: Request, schoolid: str, autologin: str) ->
     params = {"i": schoolid}
 
     response = request.post(
-        URL.login, params=params, cookies=httpx.Cookies({"SPH-AutoLogin": autologin})
+        URL.login, authentication=True, params=params, cookies=httpx.Cookies({"SPH-AutoLogin": autologin})
     )
 
     html = HTMLParser(response.content)
@@ -103,6 +103,7 @@ def get_session_by_autologin(request: Request, schoolid: str, autologin: str) ->
     # Get new session
     login_page_post = request.post(
         URL.login,
+        authentication=True,
         data=data,
         params=params,
         cookies=httpx.Cookies({"SPH-AutoLogin": autologin}),
@@ -144,7 +145,7 @@ def get_session(
         "password": password,
     }
 
-    response = request.post(URL.login, data=data, params=params)
+    response = request.post(URL.login, authentication=True, data=data, params=params)
 
     cookies = httpx.Cookies()
     cookies.set(
@@ -165,7 +166,7 @@ def get_session(
 def get_authentication_url(request: Request, cookies: httpx.Cookies) -> str:
     """Get the authentication url to get sid."""
     url = "https://connect.schulportal.hessen.de/"
-    response = request.head(url, cookies=cookies)
+    response = request.head(url, authentication=True, cookies=cookies)
 
     # Link to the next (and final) page.
     authentication_url = response.headers.get("location")
@@ -182,7 +183,7 @@ def get_authentication_sid(
     schoolid: str,
 ) -> httpx.Cookies:
     """Get sid and return the 'final' cookies."""
-    response = request.head(url, cookies=cookies)
+    response = request.head(url, authentication=True, cookies=cookies)
 
     cookies.set("i", schoolid)
     sid = re.search("sid=(\\w+);", response.headers.get("set-cookie")).group(1)

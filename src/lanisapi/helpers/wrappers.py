@@ -33,6 +33,8 @@ def handle_exceptions(function: FunctionType) -> FunctionType:
             LOGGER.exception(
                 f"A {err.__class__.__name__} happened while requesting: {err}"
             )
+        except LoginPageRedirectError:
+            args[0].authenticated = False
         except (
             PageNotFoundError,
             CriticalElementWasNotFoundError,

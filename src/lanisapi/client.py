@@ -141,6 +141,8 @@ class LanisClient:
                 msg = "School doesn't exist, check for right spelling."
                 raise NoSchoolFoundError(msg) from err
 
+        self.request.clear_cookies()
+
         # Get new session (value: SPH-Session) and autologin token by posting to login page.
         if self.session_type == SessionType.LONG:
             response_cookies, autologin = get_session_and_autologin(
@@ -177,7 +179,7 @@ class LanisClient:
         Parameters
         ----------
         force : bool, optional
-            If True it always makes a new session with Lanis, by default False
+            If True always create a new session using Lanis, by default False
         session_type : SessionType, optional by default SessionType.NORMAL
             Which session to create.
             There are two session types: NORMAL and LONG. The long session is 30-days long (``angemeldet bleiben`` option) and needs no password or name to be put in afterwards.
@@ -188,13 +190,10 @@ class LanisClient:
         Supports only the new system (login.schulportal.hessen.de).
         More at https://support.schulportal.hessen.de/knowledgebase.php?article=1087.
         """
-        if self.authenticated:
-            print("would stop here, already authenticated.")
+
+        if not force and self.authenticated:
             LOGGER.info("Authenticate: Already authenticated.")
-            # this behaviour does not make sense, as the client is unable to check if the session expired or not
-            # instead, this method is explicit enough to get only called if authentication is really needed
-            # as an alternative, we can add a test by calling a side and check if the result is the login page
-            # return
+            return
 
         self.session_type = session_type
 
@@ -202,20 +201,18 @@ class LanisClient:
             msg = "Can't login, no credentials."
             raise WrongCredentialsError(msg)
 
-        # First check if we can restore session from a file.
-        if not force:
-            # LanisCookie login (highest priority)
-            if isinstance(self.authentication, LanisCookie):
-                self.request.set_cookies(
-                    {
-                        "i": self.authentication.school_id,
-                        "sid": self.authentication.session_id,
-                    }
-                )
-                self.authentication_method = self.AuthenticationMethod.LanisCookie
-        # Create new session if force is True or the other methods are False.
+        # create a new session
         if force or not isinstance(self.authentication, LanisCookie):
             self._create_new_session()
+        # LanisCookie login
+        else:
+            self.request.set_cookies(
+                {
+                    "i": self.authentication.school_id,
+                    "sid": self.authentication.session_id,
+                }
+            )
+            self.authentication_method = self.AuthenticationMethod.LanisCookie
 
         # Tell Lanis how to encrypt
         if not self.cryptor.authenticate():
