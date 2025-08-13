@@ -304,15 +304,16 @@ def _get_course(request: Request, cryptor: Cryptor, course_id: int) -> Course:
 
 def _get_attendance(request: Request, cryptor: Cryptor) -> list[Attendance]:
     response = request.get(URL.tasks)
-
     html = HTMLParser(cryptor.decrypt_encoded_tags(response.text))
+
+    attendances = []
 
     element = html.css_first("#anwesend")
     thead = element.css_first("thead > tr") # can be used to check if columns changed, not used here
+    if thead is None: return attendances
     keys = [i.text().strip() for i in thead.css("th")]
     tbody = element.css("tbody > tr")
 
-    attendances = []
     total = defaultdict(int)
 
     for i in tbody:
