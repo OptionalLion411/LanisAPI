@@ -109,6 +109,10 @@ def _get_tasks(request: Request) -> list[Task]:
         if not element:
             raise CriticalElementWasNotFoundError("Critical task element was not found!")
 
+        main_element = element.css_first("td:nth-child(2)")
+        if main_element and "noch kein Eintrag" in main_element.text():
+            continue
+
         # Name of task.
         title_element = element.css_first("b.thema")
         try:
