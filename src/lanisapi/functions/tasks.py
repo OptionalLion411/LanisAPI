@@ -70,6 +70,7 @@ class CourseTask:
     done: bool = field()
     attachments: list[Attachment] = field()
     attendance: AttendanceType = field()
+    attendance_reason: str = field()
     uploads: list[dict] = field(factory=list)
 
 @define
@@ -255,7 +256,14 @@ def _get_semester(request: Request, cryptor: Cryptor, course_id: int, semester: 
         if len(date_time) < 2:
             date_time.append(date_time[0])
 
-        attendance = i.css_first("td:last-child").text(deep=False).strip()
+        attendance_sel = i.css_first("td:last-child")
+        attendance_sel.css_first("div.hidden").decompose()
+        attendance_plain = attendance_sel.text().strip()
+        attendance, _, detail = attendance_plain.partition(" (")
+        if detail != '':
+            detail = detail[:-1]
+            print(detail)
+
         attendance = AttendanceType(attendance) if attendance and attendance != "nicht erfasst" else None
 
         entries.append(CourseTask(
@@ -267,6 +275,7 @@ def _get_semester(request: Request, cryptor: Cryptor, course_id: int, semester: 
             homework=homework,
             done=homework_done,
             attendance=attendance,
+            attendance_reason=detail,
             attachments=files
         ))
 
